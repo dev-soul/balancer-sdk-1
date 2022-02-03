@@ -52,7 +52,7 @@
         "typescript": "^4.0.2"
     },
     "dependencies": {
-        "@balancer-labs/sor": "github:beethovenxfi/balancer-sor#bcfe1123eb19f7a4473d48d29e51917b9a7e20ae",
+        "@balancer-labs/sor": "github:beethovenxfi/balancer-sor#e911a1192aca13b2021bbfc3e80a234b3b63f6ad",
         "@ethersproject/abi": "^5.5.0",
         "@ethersproject/abstract-signer": "^5.5.0",
         "@ethersproject/contracts": "^5.5.0",
