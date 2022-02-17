@@ -7869,6 +7869,76 @@
     	}
     ];
 
+    var yearnWrappingAbi = [
+    	{
+    		inputs: [
+    			{
+    				internalType: "contract IERC20",
+    				name: "token",
+    				type: "address"
+    			},
+    			{
+    				internalType: "uint256",
+    				name: "amount",
+    				type: "uint256"
+    			}
+    		],
+    		name: "approveVault",
+    		outputs: [
+    		],
+    		stateMutability: "nonpayable",
+    		type: "function"
+    	},
+    	{
+    		inputs: [
+    		],
+    		name: "getVault",
+    		outputs: [
+    			{
+    				internalType: "contract IVault",
+    				name: "",
+    				type: "address"
+    			}
+    		],
+    		stateMutability: "view",
+    		type: "function"
+    	},
+    	{
+    		inputs: [
+    			{
+    				internalType: "contract IYearnTokenVault",
+    				name: "vaultToken",
+    				type: "address"
+    			},
+    			{
+    				internalType: "address",
+    				name: "sender",
+    				type: "address"
+    			},
+    			{
+    				internalType: "address",
+    				name: "recipient",
+    				type: "address"
+    			},
+    			{
+    				internalType: "uint256",
+    				name: "amount",
+    				type: "uint256"
+    			},
+    			{
+    				internalType: "uint256",
+    				name: "outputReference",
+    				type: "uint256"
+    			}
+    		],
+    		name: "unwrapYearnVaultToken",
+    		outputs: [
+    		],
+    		stateMutability: "payable",
+    		type: "function"
+    	}
+    ];
+
     class Relayer {
         constructor(swapsOrConfig) {
             if (swapsOrConfig instanceof Swaps) {
@@ -7911,6 +7981,16 @@
                 params.amount,
                 params.toUnderlying,
                 params.outputReferences,
+            ]);
+        }
+        static encodeUnwrapYearnVaultToken(params) {
+            const yearnWrappingLibrary = new abi.Interface(yearnWrappingAbi);
+            return yearnWrappingLibrary.encodeFunctionData('unwrapYearnVaultToken', [
+                params.vaultToken,
+                params.sender,
+                params.recipient,
+                params.amount,
+                params.outputReference,
             ]);
         }
         static toChainedReference(key) {
@@ -8057,33 +8137,34 @@
             };
         }
         /**
-         * swapUnwrapAaveStaticExactIn Finds swaps for tokenIn>wrapped Aave static tokens and chains with unwrap to underlying stable.
+         * swapUnwrapExactIn Finds swaps for tokenIn>wrapped tokens and chains with unwrap to underlying stable.
          * @param {string[]} tokensIn - array to token addresses for swapping as tokens in.
-         * @param {string[]} aaveStaticTokens - array contains the addresses of the Aave static tokens that tokenIn will be swapped to. These will be unwrapped.
+         * @param {string[]} wrappedTokens - array contains the addresses of the wrapped tokens that tokenIn will be swapped to. These will be unwrapped.
          * @param {string[]} amountsIn - amounts to be swapped for each token in.
          * @param {string[]} rates - The rate used to convert wrappedToken to underlying.
          * @param {FundManagement} funds - Funding info for swap. Note - recipient should be relayer and sender should be caller.
          * @param {string} slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
+         * @param {UnwrapType} unwrapType - Type of unwrap to perform
          * @param {FetchPoolsInput} fetchPools - Set whether SOR will fetch updated pool info.
          * @returns Transaction data with calldata. Outputs.amountsOut has final amounts out of unwrapped tokens.
          */
-        async swapUnwrapAaveStaticExactIn(tokensIn, aaveStaticTokens, amountsIn, rates, funds, slippage, fetchPools = {
+        async swapUnwrapExactIn(tokensIn, wrappedTokens, amountsIn, rates, funds, slippage, unwrapType, fetchPools = {
             fetchPools: true,
             fetchOnChain: false,
         }) {
             // Use swapsService to get swap info for tokensIn>wrappedTokens
             const queryResult = await this.swaps.queryBatchSwapWithSor({
                 tokensIn,
-                tokensOut: aaveStaticTokens,
+                tokensOut: wrappedTokens,
                 swapType: exports.SwapType.SwapExactIn,
                 amounts: amountsIn,
                 fetchPools,
             });
             // Gets limits array for tokensIn>wrappedTokens based on input slippage
             const limits = Swaps.getLimitsForSlippage(tokensIn, // tokensIn
-            aaveStaticTokens, // tokensOut
+            wrappedTokens, // tokensOut
             exports.SwapType.SwapExactIn, queryResult.deltas, queryResult.assets, slippage);
-            const calls = this.encodeSwapUnwrap(aaveStaticTokens, exports.SwapType.SwapExactIn, queryResult.swaps, queryResult.assets, funds, limits);
+            const calls = this.encodeSwapUnwrap(wrappedTokens, exports.SwapType.SwapExactIn, queryResult.swaps, queryResult.assets, funds, limits, unwrapType);
             const amountsUnwrapped = queryResult.returnAmounts.map((amountWrapped, i) => bignumber.BigNumber.from(amountWrapped)
                 .abs()
                 .mul(rates[i])
@@ -8098,17 +8179,18 @@
             };
         }
         /**
-         * swapUnwrapAaveStaticExactOut Finds swaps for tokenIn>wrapped Aave static tokens and chains with unwrap to underlying stable.
+         * swapUnwrapExactOut Finds swaps for tokenIn>wrapped tokens and chains with unwrap to underlying stable.
          * @param {string[]} tokensIn - array to token addresses for swapping as tokens in.
-         * @param {string[]} aaveStaticTokens - array contains the addresses of the Aave static tokens that tokenIn will be swapped to. These will be unwrapped.
+         * @param {string[]} wrappedTokens - array contains the addresses of the wrapped tokens that tokenIn will be swapped to. These will be unwrapped.
          * @param {string[]} amountsUnwrapped - amounts of unwrapped tokens out.
          * @param {string[]} rates - The rate used to convert wrappedToken to underlying.
          * @param {FundManagement} funds - Funding info for swap. Note - recipient should be relayer and sender should be caller.
          * @param {string} slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
+         * @param {UnwrapType} unwrapType - Type of unwrap to perform
          * @param {FetchPoolsInput} fetchPools - Set whether SOR will fetch updated pool info.
          * @returns Transaction data with calldata. Outputs.amountsIn has the amounts of tokensIn.
          */
-        async swapUnwrapAaveStaticExactOut(tokensIn, aaveStaticTokens, amountsUnwrapped, rates, funds, slippage, fetchPools = {
+        async swapUnwrapExactOut(tokensIn, wrappedTokens, amountsUnwrapped, rates, funds, slippage, unwrapType, fetchPools = {
             fetchPools: true,
             fetchOnChain: false,
         }) {
@@ -8119,16 +8201,16 @@
             // Use swapsService to get swap info for tokensIn>wrappedTokens
             const queryResult = await this.swaps.queryBatchSwapWithSor({
                 tokensIn,
-                tokensOut: aaveStaticTokens,
+                tokensOut: wrappedTokens,
                 swapType: exports.SwapType.SwapExactOut,
                 amounts: amountsWrapped,
                 fetchPools,
             });
             // Gets limits array for tokensIn>wrappedTokens based on input slippage
             const limits = Swaps.getLimitsForSlippage(tokensIn, // tokensIn
-            aaveStaticTokens, // tokensOut
+            wrappedTokens, // tokensOut
             exports.SwapType.SwapExactOut, queryResult.deltas, queryResult.assets, slippage);
-            const calls = this.encodeSwapUnwrap(aaveStaticTokens, exports.SwapType.SwapExactOut, queryResult.swaps, queryResult.assets, funds, limits);
+            const calls = this.encodeSwapUnwrap(wrappedTokens, exports.SwapType.SwapExactOut, queryResult.swaps, queryResult.assets, funds, limits, unwrapType);
             return {
                 function: 'multicall',
                 params: calls,
@@ -8145,9 +8227,10 @@
          * @param assets
          * @param funds
          * @param limits
+         * @param unwrapType
          * @returns
          */
-        encodeSwapUnwrap(wrappedTokens, swapType, swaps, assets, funds, limits) {
+        encodeSwapUnwrap(wrappedTokens, swapType, swaps, assets, funds, limits, unwrapType) {
             // Output of swaps (wrappedTokens) is used as input to unwrap
             // Need indices of output tokens and outputReferences need to be made with those as key
             const outputReferences = [];
@@ -8164,15 +8247,27 @@
                     key: key,
                 });
                 // console.log(`Unwrapping ${wrappedToken} with amt: ${key.toHexString()}`);
-                const encodedUnwrap = Relayer.encodeUnwrapAaveStaticToken({
-                    staticToken: wrappedToken,
-                    sender: funds.recipient,
-                    recipient: funds.sender,
-                    amount: key,
-                    toUnderlying: true,
-                    outputReferences: 0,
-                });
-                unwrapCalls.push(encodedUnwrap);
+                switch (unwrapType) {
+                    case 'aave':
+                        unwrapCalls.push(Relayer.encodeUnwrapAaveStaticToken({
+                            staticToken: wrappedToken,
+                            sender: funds.recipient,
+                            recipient: funds.sender,
+                            amount: key,
+                            toUnderlying: true,
+                            outputReferences: 0,
+                        }));
+                        break;
+                    case 'yearn':
+                        unwrapCalls.push(Relayer.encodeUnwrapYearnVaultToken({
+                            vaultToken: wrappedToken,
+                            sender: funds.recipient,
+                            recipient: funds.sender,
+                            amount: key,
+                            outputReference: 0,
+                        }));
+                        break;
+                }
             });
             const encodedBatchSwap = Relayer.encodeBatchSwap({
                 swapType: swapType,

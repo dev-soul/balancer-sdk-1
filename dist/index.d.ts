@@ -520,6 +520,13 @@ interface EncodeUnwrapAaveStaticTokenInput {
     toUnderlying: boolean;
     outputReferences: BigNumberish;
 }
+interface EncodeUnwrapYearnVaultTokenInput {
+    vaultToken: string;
+    sender: string;
+    recipient: string;
+    amount: BigNumberish;
+    outputReference: BigNumberish;
+}
 interface ExitAndBatchSwapInput {
     exiter: string;
     swapRecipient: string;
@@ -532,6 +539,7 @@ interface ExitAndBatchSwapInput {
     fetchPools: FetchPoolsInput;
 }
 declare type ExitPoolData = ExitPoolRequest & EncodeExitPoolInput;
+declare type UnwrapType = 'aave' | 'yearn';
 
 declare class Relayer {
     private readonly swaps;
@@ -540,6 +548,7 @@ declare class Relayer {
     static encodeBatchSwap(params: EncodeBatchSwapInput): string;
     static encodeExitPool(params: EncodeExitPoolInput): string;
     static encodeUnwrapAaveStaticToken(params: EncodeUnwrapAaveStaticTokenInput): string;
+    static encodeUnwrapYearnVaultToken(params: EncodeUnwrapYearnVaultTokenInput): string;
     static toChainedReference(key: BigNumberish): BigNumber;
     static constructExitCall(params: ExitPoolData): string;
     /**
@@ -566,29 +575,31 @@ declare class Relayer {
      */
     exitPoolAndBatchSwap(params: ExitAndBatchSwapInput): Promise<TransactionData>;
     /**
-     * swapUnwrapAaveStaticExactIn Finds swaps for tokenIn>wrapped Aave static tokens and chains with unwrap to underlying stable.
+     * swapUnwrapExactIn Finds swaps for tokenIn>wrapped tokens and chains with unwrap to underlying stable.
      * @param {string[]} tokensIn - array to token addresses for swapping as tokens in.
-     * @param {string[]} aaveStaticTokens - array contains the addresses of the Aave static tokens that tokenIn will be swapped to. These will be unwrapped.
+     * @param {string[]} wrappedTokens - array contains the addresses of the wrapped tokens that tokenIn will be swapped to. These will be unwrapped.
      * @param {string[]} amountsIn - amounts to be swapped for each token in.
      * @param {string[]} rates - The rate used to convert wrappedToken to underlying.
      * @param {FundManagement} funds - Funding info for swap. Note - recipient should be relayer and sender should be caller.
      * @param {string} slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
+     * @param {UnwrapType} unwrapType - Type of unwrap to perform
      * @param {FetchPoolsInput} fetchPools - Set whether SOR will fetch updated pool info.
      * @returns Transaction data with calldata. Outputs.amountsOut has final amounts out of unwrapped tokens.
      */
-    swapUnwrapAaveStaticExactIn(tokensIn: string[], aaveStaticTokens: string[], amountsIn: string[], rates: string[], funds: FundManagement, slippage: string, fetchPools?: FetchPoolsInput): Promise<TransactionData>;
+    swapUnwrapExactIn(tokensIn: string[], wrappedTokens: string[], amountsIn: string[], rates: string[], funds: FundManagement, slippage: string, unwrapType: UnwrapType, fetchPools?: FetchPoolsInput): Promise<TransactionData>;
     /**
-     * swapUnwrapAaveStaticExactOut Finds swaps for tokenIn>wrapped Aave static tokens and chains with unwrap to underlying stable.
+     * swapUnwrapExactOut Finds swaps for tokenIn>wrapped tokens and chains with unwrap to underlying stable.
      * @param {string[]} tokensIn - array to token addresses for swapping as tokens in.
-     * @param {string[]} aaveStaticTokens - array contains the addresses of the Aave static tokens that tokenIn will be swapped to. These will be unwrapped.
+     * @param {string[]} wrappedTokens - array contains the addresses of the wrapped tokens that tokenIn will be swapped to. These will be unwrapped.
      * @param {string[]} amountsUnwrapped - amounts of unwrapped tokens out.
      * @param {string[]} rates - The rate used to convert wrappedToken to underlying.
      * @param {FundManagement} funds - Funding info for swap. Note - recipient should be relayer and sender should be caller.
      * @param {string} slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
+     * @param {UnwrapType} unwrapType - Type of unwrap to perform
      * @param {FetchPoolsInput} fetchPools - Set whether SOR will fetch updated pool info.
      * @returns Transaction data with calldata. Outputs.amountsIn has the amounts of tokensIn.
      */
-    swapUnwrapAaveStaticExactOut(tokensIn: string[], aaveStaticTokens: string[], amountsUnwrapped: string[], rates: string[], funds: FundManagement, slippage: string, fetchPools?: FetchPoolsInput): Promise<TransactionData>;
+    swapUnwrapExactOut(tokensIn: string[], wrappedTokens: string[], amountsUnwrapped: string[], rates: string[], funds: FundManagement, slippage: string, unwrapType: UnwrapType, fetchPools?: FetchPoolsInput): Promise<TransactionData>;
     /**
      * Creates encoded multicalls using swap outputs as input amounts for token unwrap.
      * @param wrappedTokens
@@ -597,9 +608,10 @@ declare class Relayer {
      * @param assets
      * @param funds
      * @param limits
+     * @param unwrapType
      * @returns
      */
-    encodeSwapUnwrap(wrappedTokens: string[], swapType: SwapType, swaps: BatchSwapStep[], assets: string[], funds: FundManagement, limits: BigNumberish[]): string[];
+    encodeSwapUnwrap(wrappedTokens: string[], swapType: SwapType, swaps: BatchSwapStep[], assets: string[], funds: FundManagement, limits: BigNumberish[], unwrapType: UnwrapType): string[];
 }
 
 declare type Maybe<T> = T | null;
@@ -1786,4 +1798,4 @@ declare class BalancerSDK {
     get networkConfig(): BalancerNetworkConfig;
 }
 
-export { AaveHelpers, Account, AssetHelpers, BalancerErrors, BalancerNetworkConfig, BalancerSDK, BalancerSdkConfig, BalancerSdkSorConfig, BatchSwap, BatchSwapStep, EncodeBatchSwapInput, EncodeExitPoolInput, EncodeUnwrapAaveStaticTokenInput, ExitAndBatchSwapInput, ExitPoolData, ExitPoolRequest, FetchPoolsInput, FundManagement, JoinPoolRequest, ManagedPoolEncoder, Network, OutputReference, PoolBalanceOp, PoolBalanceOpKind, PoolReference, PoolSpecialization, QueryWithSorInput, QueryWithSorOutput, Relayer, RelayerAction, RelayerAuthorization, SingleSwap, Sor, StablePhantomPoolJoinKind, StablePoolEncoder, StablePoolExitKind, StablePoolJoinKind, Subgraph, Swap, SwapType, Swaps, TransactionData, UserBalanceOp, UserBalanceOpKind, WeightedPoolEncoder, WeightedPoolExitKind, WeightedPoolJoinKind, accountToAddress, getLimitsForSlippage, getPoolAddress, getPoolNonce, getPoolSpecialization, isNormalizedWeights, isSameAddress, signPermit, splitPoolId, toNormalizedWeights };
+export { AaveHelpers, Account, AssetHelpers, BalancerErrors, BalancerNetworkConfig, BalancerSDK, BalancerSdkConfig, BalancerSdkSorConfig, BatchSwap, BatchSwapStep, EncodeBatchSwapInput, EncodeExitPoolInput, EncodeUnwrapAaveStaticTokenInput, EncodeUnwrapYearnVaultTokenInput, ExitAndBatchSwapInput, ExitPoolData, ExitPoolRequest, FetchPoolsInput, FundManagement, JoinPoolRequest, ManagedPoolEncoder, Network, OutputReference, PoolBalanceOp, PoolBalanceOpKind, PoolReference, PoolSpecialization, QueryWithSorInput, QueryWithSorOutput, Relayer, RelayerAction, RelayerAuthorization, SingleSwap, Sor, StablePhantomPoolJoinKind, StablePoolEncoder, StablePoolExitKind, StablePoolJoinKind, Subgraph, Swap, SwapType, Swaps, TransactionData, UnwrapType, UserBalanceOp, UserBalanceOpKind, WeightedPoolEncoder, WeightedPoolExitKind, WeightedPoolJoinKind, accountToAddress, getLimitsForSlippage, getPoolAddress, getPoolNonce, getPoolSpecialization, isNormalizedWeights, isSameAddress, signPermit, splitPoolId, toNormalizedWeights };
