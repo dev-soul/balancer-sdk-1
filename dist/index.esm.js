@@ -861,7 +861,7 @@ function batchSwaps(assetArray, swaps) {
     return { swaps: batchedSwaps, assets: newAssetArray };
 }
 
-const balancerVault = '0xBA12222222228d8Ba445958a75a0704d566BF2C8';
+const balancerVault = '0x20dd72Ed959b6147912C2e529F0a0C651c33c9ce';
 const BALANCER_NETWORK_CONFIG = {
     [Network.MAINNET]: {
         chainId: Network.MAINNET,
