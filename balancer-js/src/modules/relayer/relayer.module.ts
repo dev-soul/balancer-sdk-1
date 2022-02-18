@@ -1,30 +1,35 @@
-import { BigNumberish, BigNumber } from '@ethersproject/bignumber';
+import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 import { Interface } from '@ethersproject/abi';
-import { MaxUint256, WeiPerEther } from '@ethersproject/constants';
+import { MaxUint256, WeiPerEther, Zero } from '@ethersproject/constants';
 
 import { Swaps } from '@/modules/swaps/swaps.module';
 import {
+    BatchRelayerJoinPool,
     EncodeBatchSwapInput,
-    EncodeUnwrapAaveStaticTokenInput,
-    OutputReference,
     EncodeExitPoolInput,
+    EncodeJoinPoolInput,
+    EncodeUnwrapAaveStaticTokenInput,
+    EncodeUnwrapYearnVaultTokenInput,
     ExitAndBatchSwapInput,
     ExitPoolData,
-    EncodeUnwrapYearnVaultTokenInput,
+    NestedLinearPool,
+    OutputReference,
     UnwrapType,
 } from './types';
-import { TransactionData, ExitPoolRequest, BalancerSdkConfig } from '@/types';
+import { BalancerSdkConfig, ExitPoolRequest, TransactionData } from '@/types';
 import {
-    SwapType,
-    FundManagement,
     BatchSwapStep,
     FetchPoolsInput,
+    FundManagement,
+    SwapType,
 } from '../swaps/types';
 import { SubgraphPoolBase } from '@balancer-labs/sor';
 
 import relayerLibraryAbi from '@/lib/abi/VaultActions.json';
 import aaveWrappingAbi from '@/lib/abi/AaveWrapping.json';
 import yearnWrappingAbi from '@/lib/abi/YearnWrapping.json';
+import { keyBy, sortBy } from 'lodash';
+import { WeightedPoolEncoder } from '@/pool-weighted/encoder';
 
 export * from './types';
 
@@ -66,6 +71,20 @@ export class Relayer {
             params.recipient,
             params.exitPoolRequest,
             params.outputReferences,
+        ]);
+    }
+
+    static encodeJoinPool(params: EncodeJoinPoolInput): string {
+        const relayerLibrary = new Interface(relayerLibraryAbi);
+
+        return relayerLibrary.encodeFunctionData('joinPool', [
+            params.poolId,
+            params.poolKind,
+            params.sender,
+            params.recipient,
+            params.joinPoolRequest,
+            params.value,
+            params.outputReference,
         ]);
     }
 
@@ -154,6 +173,30 @@ export class Relayer {
 
     public getPools(): SubgraphPoolBase[] {
         return this.swaps.getPools();
+    }
+
+    private get poolMap(): { [address: string]: SubgraphPoolBase } {
+        const pools = this.getPools();
+
+        return keyBy(pools, 'address');
+    }
+
+    private get linearPoolMap(): { [address: string]: SubgraphPoolBase } {
+        const pools = this.getPools();
+
+        return keyBy(
+            pools.filter((pool) => pool.poolType === 'Linear'),
+            'address'
+        );
+    }
+
+    private get stablePhantomMap(): { [address: string]: SubgraphPoolBase } {
+        const pools = this.getPools();
+
+        return keyBy(
+            pools.filter((pool) => pool.poolType === 'StablePhantom'),
+            'address'
+        );
     }
 
     /**
@@ -284,6 +327,164 @@ export class Relayer {
                 amountsOut: queryResult.returnAmounts,
             },
         };
+    }
+
+    async joinPool({
+        poolId,
+        joinType,
+        tokens,
+        bptOut,
+        fetchPools,
+        slippage,
+        funds,
+    }: BatchRelayerJoinPool): Promise<TransactionData> {
+        const pool = this.getRequiredPool(poolId);
+        const nestedLinearPools = this.getNestedLinearPools(pool);
+        const calls: string[] = [];
+
+        if (nestedLinearPools.length > 0) {
+            //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
+            const tokensIn = nestedLinearPools.map((item) => item.mainToken);
+            const tokensOut = nestedLinearPools.map(
+                (item) => item.poolTokenAddress
+            );
+            const amounts = tokensIn.map((tokenAddress) => {
+                const token = tokens.find(
+                    (token) => token.address === tokenAddress
+                );
+
+                return token?.amount || '0';
+            });
+
+            const swapType =
+                joinType === 'exact-in'
+                    ? SwapType.SwapExactIn
+                    : SwapType.SwapExactOut;
+
+            const queryResult = await this.swaps.queryBatchSwapWithSor({
+                tokensIn,
+                tokensOut,
+                swapType,
+                amounts,
+                fetchPools,
+            });
+
+            const limits = Swaps.getLimitsForSlippage(
+                tokensIn,
+                tokensOut,
+                SwapType.SwapExactIn,
+                queryResult.deltas,
+                queryResult.assets,
+                slippage
+            );
+
+            const encodedBatchSwap = Relayer.encodeBatchSwap({
+                swapType,
+                swaps: queryResult.swaps,
+                assets: queryResult.assets,
+                funds,
+                limits: limits.map((l) => l.toString()),
+                deadline: MaxUint256,
+                value: '0', //TODO: this should represent native eth value
+                outputReferences: queryResult.assets.map((asset, index) => ({
+                    index,
+                    key: Relayer.toChainedReference(index),
+                })),
+            });
+
+            calls.push(encodedBatchSwap);
+        }
+
+        //if this is a weighted pool, we need to also join the pool
+        if (pool.poolType === 'Weighted') {
+            const amountsIn = pool.tokensList.map((tokenAddress) => {
+                const token = tokens.find(
+                    (token) => token.address === tokenAddress
+                );
+
+                if (token) {
+                    return token.amount;
+                }
+
+                //This token is a nested BPT, not a mainToken
+                //The max here will be replaced by the outputReference from the previous step
+                return MaxUint256;
+            });
+
+            const encodedJoinPool = Relayer.encodeJoinPool({
+                poolId: pool.id,
+                poolKind: 0,
+                sender: funds.sender,
+                recipient: funds.recipient,
+                joinPoolRequest: {
+                    assets: pool.tokensList,
+                    maxAmountsIn: amountsIn,
+                    userData: WeightedPoolEncoder.joinExactTokensInForBPTOut(
+                        amountsIn,
+                        bptOut
+                    ),
+                    fromInternalBalance: funds.fromInternalBalance,
+                },
+                value: Zero, //TODO: if we support sending native eth, needs to be handled here
+                outputReference: Zero,
+            });
+
+            calls.push(encodedJoinPool);
+        }
+
+        return {
+            function: 'multicall',
+            params: calls,
+            outputs: {
+                //amountsOut: amountsUnwrapped,
+            },
+        };
+    }
+
+    private getNestedLinearPools(pool: SubgraphPoolBase): NestedLinearPool[] {
+        const linearPools: NestedLinearPool[] = [];
+
+        for (const token of pool.tokensList) {
+            if (this.linearPoolMap[token]) {
+                const linearPool = this.linearPoolMap[token];
+                const mainIdx = linearPool.mainIndex || 0;
+
+                linearPools.push({
+                    pool: linearPool,
+                    mainToken: linearPool.tokensList[mainIdx],
+                    poolTokenAddress: linearPool.address,
+                });
+            } else if (this.stablePhantomMap[token]) {
+                for (const stablePhantomToken of this.stablePhantomMap[token]
+                    .tokensList) {
+                    if (this.linearPoolMap[stablePhantomToken]) {
+                        const linearPool =
+                            this.linearPoolMap[stablePhantomToken];
+                        const mainIdx = linearPool.mainIndex || 0;
+
+                        linearPools.push({
+                            pool: linearPool,
+                            mainToken: linearPool.tokensList[mainIdx],
+                            poolTokenAddress:
+                                this.stablePhantomMap[token].address,
+                        });
+                    }
+                }
+            }
+        }
+
+        return linearPools;
+    }
+
+    private getRequiredPool(poolId: string) {
+        const pools = this.getPools();
+        const pool = pools.find((pool) => pool.id === poolId);
+
+        if (!pool) {
+            throw new Error('No pool found with id: ' + poolId);
+        }
+
+        return pool;
     }
 
     /**

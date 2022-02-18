@@ -5,7 +5,8 @@ import {
     FundManagement,
     SwapType,
 } from '@/modules/swaps/types';
-import { ExitPoolRequest } from '@/types';
+import { ExitPoolRequest, JoinPoolRequest } from '@/types';
+import { SubgraphPoolBase } from '@balancer-labs/sor';
 
 export type OutputReference = {
     index: number;
@@ -30,6 +31,16 @@ export interface EncodeExitPoolInput {
     recipient: string;
     outputReferences: OutputReference[];
     exitPoolRequest: ExitPoolRequest;
+}
+
+export interface EncodeJoinPoolInput {
+    poolId: string;
+    poolKind: number;
+    sender: string;
+    recipient: string;
+    joinPoolRequest: JoinPoolRequest;
+    value: BigNumber;
+    outputReference: BigNumber;
 }
 
 export interface EncodeUnwrapAaveStaticTokenInput {
@@ -64,3 +75,22 @@ export interface ExitAndBatchSwapInput {
 export type ExitPoolData = ExitPoolRequest & EncodeExitPoolInput;
 
 export type UnwrapType = 'aave' | 'yearn';
+
+export interface NestedLinearPool {
+    pool: SubgraphPoolBase;
+    mainToken: string;
+    poolTokenAddress: string;
+}
+
+export interface BatchRelayerJoinPool {
+    poolId: string;
+    joinType: 'exact-in' | 'exact-out';
+    tokens: {
+        address: string;
+        amount: string;
+    }[];
+    bptOut: string;
+    fetchPools: FetchPoolsInput;
+    slippage: string;
+    funds: FundManagement;
+}
