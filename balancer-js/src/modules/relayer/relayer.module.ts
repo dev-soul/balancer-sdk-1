@@ -341,6 +341,7 @@ export class Relayer {
         const pool = this.getRequiredPool(poolId);
         const nestedLinearPools = this.getNestedLinearPools(pool);
         const calls: string[] = [];
+        let batchSwapAssets: string[] = [];
 
         if (nestedLinearPools.length > 0) {
             //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
@@ -350,7 +351,9 @@ export class Relayer {
             );
             const amounts = tokensIn.map((tokenAddress) => {
                 const token = tokens.find(
-                    (token) => token.address === tokenAddress
+                    (token) =>
+                        token.address.toLowerCase() ===
+                        tokenAddress.toLowerCase()
                 );
 
                 return token?.amount || '0';
@@ -368,6 +371,8 @@ export class Relayer {
                 amounts,
                 fetchPools,
             });
+
+            batchSwapAssets = queryResult.assets;
 
             const limits = Swaps.getLimitsForSlippage(
                 tokensIn,
@@ -407,8 +412,13 @@ export class Relayer {
                 }
 
                 //This token is a nested BPT, not a mainToken
-                //The max here will be replaced by the outputReference from the previous step
-                return MaxUint256;
+                //Replace the amount with the chained reference value
+                const index = batchSwapAssets.findIndex(
+                    (asset) =>
+                        asset.toLowerCase() === tokenAddress.toLowerCase()
+                );
+
+                return Relayer.toChainedReference(index);
             });
 
             const encodedJoinPool = Relayer.encodeJoinPool({
