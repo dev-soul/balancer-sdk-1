@@ -7044,6 +7044,7 @@
         exports.Network.RINKEBY,
         exports.Network.GÖRLI,
         exports.Network.KOVAN,
+        250,
     ];
     class SubgraphPoolDataService {
         constructor(client, provider, network, sorConfig) {
@@ -8164,12 +8165,14 @@
             const pool = this.getRequiredPool(poolId);
             const nestedLinearPools = this.getNestedLinearPools(pool);
             const calls = [];
+            let batchSwapAssets = [];
             if (nestedLinearPools.length > 0) {
                 //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
                 const tokensIn = nestedLinearPools.map((item) => item.mainToken);
                 const tokensOut = nestedLinearPools.map((item) => item.poolTokenAddress);
                 const amounts = tokensIn.map((tokenAddress) => {
-                    const token = tokens.find((token) => token.address === tokenAddress);
+                    const token = tokens.find((token) => token.address.toLowerCase() ===
+                        tokenAddress.toLowerCase());
                     return (token === null || token === void 0 ? void 0 : token.amount) || '0';
                 });
                 const swapType = joinType === 'exact-in'
@@ -8182,6 +8185,7 @@
                     amounts,
                     fetchPools,
                 });
+                batchSwapAssets = queryResult.assets;
                 const limits = Swaps.getLimitsForSlippage(tokensIn, tokensOut, exports.SwapType.SwapExactIn, queryResult.deltas, queryResult.assets, slippage);
                 const encodedBatchSwap = Relayer.encodeBatchSwap({
                     swapType,
@@ -8206,8 +8210,9 @@
                         return token.amount;
                     }
                     //This token is a nested BPT, not a mainToken
-                    //The max here will be replaced by the outputReference from the previous step
-                    return constants.MaxUint256;
+                    //Replace the amount with the chained reference value
+                    const index = batchSwapAssets.findIndex((asset) => asset.toLowerCase() === tokenAddress.toLowerCase());
+                    return Relayer.toChainedReference(index);
                 });
                 const encodedJoinPool = Relayer.encodeJoinPool({
                     poolId: pool.id,
