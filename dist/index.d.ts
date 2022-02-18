@@ -512,6 +512,15 @@ interface EncodeExitPoolInput {
     outputReferences: OutputReference[];
     exitPoolRequest: ExitPoolRequest;
 }
+interface EncodeJoinPoolInput {
+    poolId: string;
+    poolKind: number;
+    sender: string;
+    recipient: string;
+    joinPoolRequest: JoinPoolRequest;
+    value: BigNumber;
+    outputReference: BigNumber;
+}
 interface EncodeUnwrapAaveStaticTokenInput {
     staticToken: string;
     sender: string;
@@ -540,6 +549,23 @@ interface ExitAndBatchSwapInput {
 }
 declare type ExitPoolData = ExitPoolRequest & EncodeExitPoolInput;
 declare type UnwrapType = 'aave' | 'yearn';
+interface NestedLinearPool {
+    pool: SubgraphPoolBase;
+    mainToken: string;
+    poolTokenAddress: string;
+}
+interface BatchRelayerJoinPool {
+    poolId: string;
+    joinType: 'exact-in' | 'exact-out';
+    tokens: {
+        address: string;
+        amount: string;
+    }[];
+    bptOut: string;
+    fetchPools: FetchPoolsInput;
+    slippage: string;
+    funds: FundManagement;
+}
 
 declare class Relayer {
     private readonly swaps;
@@ -547,6 +573,7 @@ declare class Relayer {
     constructor(swapsOrConfig: Swaps | BalancerSdkConfig);
     static encodeBatchSwap(params: EncodeBatchSwapInput): string;
     static encodeExitPool(params: EncodeExitPoolInput): string;
+    static encodeJoinPool(params: EncodeJoinPoolInput): string;
     static encodeUnwrapAaveStaticToken(params: EncodeUnwrapAaveStaticTokenInput): string;
     static encodeUnwrapYearnVaultToken(params: EncodeUnwrapYearnVaultTokenInput): string;
     static toChainedReference(key: BigNumberish): BigNumber;
@@ -559,6 +586,9 @@ declare class Relayer {
      */
     fetchPools(): Promise<boolean>;
     getPools(): SubgraphPoolBase[];
+    private get poolMap();
+    private get linearPoolMap();
+    private get stablePhantomMap();
     /**
      * exitPoolAndBatchSwap Chains poolExit with batchSwap to final tokens.
      * @param {ExitAndBatchSwapInput} params
@@ -574,6 +604,9 @@ declare class Relayer {
      * @returns Transaction data with calldata. Outputs.amountsOut has amounts of finalTokensOut returned.
      */
     exitPoolAndBatchSwap(params: ExitAndBatchSwapInput): Promise<TransactionData>;
+    joinPool({ poolId, joinType, tokens, bptOut, fetchPools, slippage, funds, }: BatchRelayerJoinPool): Promise<TransactionData>;
+    private getNestedLinearPools;
+    private getRequiredPool;
     /**
      * swapUnwrapExactIn Finds swaps for tokenIn>wrapped tokens and chains with unwrap to underlying stable.
      * @param {string[]} tokensIn - array to token addresses for swapping as tokens in.
@@ -1798,4 +1831,4 @@ declare class BalancerSDK {
     get networkConfig(): BalancerNetworkConfig;
 }
 
-export { AaveHelpers, Account, AssetHelpers, BalancerErrors, BalancerNetworkConfig, BalancerSDK, BalancerSdkConfig, BalancerSdkSorConfig, BatchSwap, BatchSwapStep, EncodeBatchSwapInput, EncodeExitPoolInput, EncodeUnwrapAaveStaticTokenInput, EncodeUnwrapYearnVaultTokenInput, ExitAndBatchSwapInput, ExitPoolData, ExitPoolRequest, FetchPoolsInput, FundManagement, JoinPoolRequest, ManagedPoolEncoder, Network, OutputReference, PoolBalanceOp, PoolBalanceOpKind, PoolReference, PoolSpecialization, QueryWithSorInput, QueryWithSorOutput, Relayer, RelayerAction, RelayerAuthorization, SingleSwap, Sor, StablePhantomPoolJoinKind, StablePoolEncoder, StablePoolExitKind, StablePoolJoinKind, Subgraph, Swap, SwapType, Swaps, TransactionData, UnwrapType, UserBalanceOp, UserBalanceOpKind, WeightedPoolEncoder, WeightedPoolExitKind, WeightedPoolJoinKind, accountToAddress, getLimitsForSlippage, getPoolAddress, getPoolNonce, getPoolSpecialization, isNormalizedWeights, isSameAddress, signPermit, splitPoolId, toNormalizedWeights };
+export { AaveHelpers, Account, AssetHelpers, BalancerErrors, BalancerNetworkConfig, BalancerSDK, BalancerSdkConfig, BalancerSdkSorConfig, BatchRelayerJoinPool, BatchSwap, BatchSwapStep, EncodeBatchSwapInput, EncodeExitPoolInput, EncodeJoinPoolInput, EncodeUnwrapAaveStaticTokenInput, EncodeUnwrapYearnVaultTokenInput, ExitAndBatchSwapInput, ExitPoolData, ExitPoolRequest, FetchPoolsInput, FundManagement, JoinPoolRequest, ManagedPoolEncoder, NestedLinearPool, Network, OutputReference, PoolBalanceOp, PoolBalanceOpKind, PoolReference, PoolSpecialization, QueryWithSorInput, QueryWithSorOutput, Relayer, RelayerAction, RelayerAuthorization, SingleSwap, Sor, StablePhantomPoolJoinKind, StablePoolEncoder, StablePoolExitKind, StablePoolJoinKind, Subgraph, Swap, SwapType, Swaps, TransactionData, UnwrapType, UserBalanceOp, UserBalanceOpKind, WeightedPoolEncoder, WeightedPoolExitKind, WeightedPoolJoinKind, accountToAddress, getLimitsForSlippage, getPoolAddress, getPoolNonce, getPoolSpecialization, isNormalizedWeights, isSameAddress, signPermit, splitPoolId, toNormalizedWeights };
