@@ -1,6 +1,6 @@
 import { defaultAbiCoder, Interface } from '@ethersproject/abi';
 import { WeiPerEther, Zero, MaxUint256, AddressZero } from '@ethersproject/constants';
-import { BigNumber, formatFixed } from '@ethersproject/bignumber';
+import { BigNumber, formatFixed, parseFixed } from '@ethersproject/bignumber';
 import { getAddress } from '@ethersproject/address';
 import { hexZeroPad, hexValue, splitSignature } from '@ethersproject/bytes';
 import { Signer } from '@ethersproject/abstract-signer';
@@ -10,7 +10,7 @@ export { PoolFilter, SOR, SwapTypes, phantomStableBPTForTokensZeroPriceImpact, q
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { GraphQLClient } from 'graphql-request';
 import { parse } from 'graphql';
-import { set, parseInt as parseInt$1, keyBy } from 'lodash';
+import { set, parseInt as parseInt$1, keyBy, flatten } from 'lodash';
 import axios from 'axios';
 
 var StablePoolJoinKind;
@@ -872,6 +872,9 @@ const BALANCER_NETWORK_CONFIG = {
             },
             tokens: {
                 wrappedNativeAsset: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+            },
+            linearFactories: {
+                '0xd7fad3bd59d6477cbe1be7f646f7f1ba25b230f8': 'aave',
             },
         },
         urls: {
@@ -2635,6 +2638,7 @@ const SubgraphPoolFragmentDoc = gql$1 `
   mainIndex
   lowerTarget
   upperTarget
+  factory
 }
     ${SubgraphPoolTokenFragmentDoc}`;
 const SubgraphPoolWithoutLinearFragmentDoc = gql$1 `
@@ -7946,13 +7950,9 @@ var yearnWrappingAbi = [
 ];
 
 class Relayer {
-    constructor(swapsOrConfig) {
-        if (swapsOrConfig instanceof Swaps) {
-            this.swaps = swapsOrConfig;
-        }
-        else {
-            this.swaps = new Swaps(swapsOrConfig);
-        }
+    constructor(swaps, config) {
+        this.swaps = swaps;
+        this.config = config;
     }
     static encodeBatchSwap(params) {
         const relayerLibrary = new Interface(relayerLibraryAbi);
@@ -8055,6 +8055,10 @@ class Relayer {
         const pools = this.getPools();
         return keyBy(pools.filter((pool) => pool.poolType === 'Linear'), 'address');
     }
+    get linearPoolWrappedTokenMap() {
+        const pools = this.getPools();
+        return keyBy(pools.filter((pool) => pool.poolType === 'Linear'), (pool) => pool.tokensList[pool.wrappedIndex || 0]);
+    }
     get stablePhantomMap() {
         const pools = this.getPools();
         return keyBy(pools.filter((pool) => pool.poolType === 'StablePhantom'), 'address');
@@ -8062,16 +8066,18 @@ class Relayer {
     /**
      * exitPoolAndBatchSwap Chains poolExit with batchSwap to final tokens.
      * @param {ExitAndBatchSwapInput} params
-     * @param {string} exiter - Address used to exit pool.
-     * @param {string} swapRecipient - Address that receives final tokens.
-     * @param {string} poolId - Id of pool being exited.
-     * @param {string[]} exitTokens - Array containing addresses of tokens to receive after exiting pool. (must have the same length and order as the array returned by `getPoolTokens`.)
-     * @param {string} userData - Encoded exitPool data.
-     * @param {string[]} expectedAmountsOut - Expected amounts of exitTokens to receive when exiting pool.
-     * @param {string[]} finalTokensOut - Array containing the addresses of the final tokens out.
-     * @param {string} slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
-     * @param {FetchPoolsInput} fetchPools - Set whether SOR will fetch updated pool info.
-     * @returns Transaction data with calldata. Outputs.amountsOut has amounts of finalTokensOut returned.
+     * @param {string} params.exiter - Address used to exit pool.
+     * @param {string} params.swapRecipient - Address that receives final tokens.
+     * @param {string} params.poolId - Id of pool being exited.
+     * @param {string[]} params.exitTokens - Array containing addresses of tokens to receive after exiting pool. (must have the same length and order as the array returned by `getPoolTokens`.)
+     * @param {string} params.userData - Encoded exitPool data.
+     * @param {string[]} params.expectedAmountsOut - Expected amounts of exitTokens to receive when exiting pool.
+     * @param {string[]} params.batchSwapTokensIn - Array containing the addresses of the input to the batchSwap.
+     * @param {string[]} params.batchSwapTokensOut - Array containing the addresses of the output tokens from the batchSwap.
+     * @param {string} params.slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
+     * @param {string} params.unwrap - Whether an unrwap should be applied to any wrapped tokens in batchSwapTokensOut
+     * @param {FetchPoolsInput} params.fetchPools - Set whether SOR will fetch updated pool info.
+     * @returns Transaction data with calldata. Outputs.amountsOut has amounts of batchSwapTokensOut returned.
      */
     async exitPoolAndBatchSwap(params) {
         const slippageAmountNegative = WeiPerEther.sub(BigNumber.from(params.slippage));
@@ -8081,14 +8087,10 @@ class Relayer {
             .div(WeiPerEther)
             .toString());
         // Output of exit is used as input to swaps
-        const outputReferences = [];
-        params.exitTokens.forEach((asset, i) => {
-            const key = Relayer.toChainedReference(i);
-            outputReferences.push({
-                index: i,
-                key: key,
-            });
-        });
+        const outputReferences = params.exitTokens.map((asset, index) => ({
+            index,
+            key: Relayer.toChainedReference(index),
+        }));
         const exitCall = Relayer.constructExitCall({
             assets: params.exitTokens,
             minAmountsOut,
@@ -8098,7 +8100,7 @@ class Relayer {
             poolKind: 0,
             sender: params.exiter,
             recipient: params.exiter,
-            outputReferences: outputReferences,
+            outputReferences,
             exitPoolRequest: {},
         });
         // Use swapsService to get swap info for exitTokens>finalTokens
@@ -8106,7 +8108,7 @@ class Relayer {
         // Amounts out will be worst case amounts
         const queryResult = await this.swaps.queryBatchSwapWithSor({
             tokensIn: params.exitTokens,
-            tokensOut: params.finalTokensOut,
+            tokensOut: params.batchSwapTokensOut,
             swapType: SwapType.SwapExactIn,
             amounts: minAmountsOut,
             fetchPools: params.fetchPools,
@@ -8136,7 +8138,7 @@ class Relayer {
         // Creates limit array.
         // Slippage set to 0. Already accounted for as swap used amounts out of pool with worst case slippage.
         const limits = Swaps.getLimitsForSlippage(params.exitTokens, // tokensIn
-        params.finalTokensOut, // tokensOut
+        params.batchSwapTokensOut, // tokensOut
         SwapType.SwapExactIn, queryResult.deltas, // tempDeltas // Useful for debug
         queryResult.assets, '0');
         // Creates fund management using internal balance as source of tokens
@@ -8146,6 +8148,15 @@ class Relayer {
             fromInternalBalance: true,
             toInternalBalance: false,
         };
+        let additionalCalls = [];
+        let unwrapOutputReferences = [];
+        if (params.unwrap) {
+            //find any wrapped tokens in the query result assets
+            const wrappedTokens = Object.keys(this.linearPoolWrappedTokenMap).filter((wrappedToken) => queryResult.assets.includes(wrappedToken));
+            const { unwrapCalls, outputReferences } = this.encodeUnwrapCalls(wrappedTokens, queryResult.assets, funds);
+            additionalCalls = unwrapCalls;
+            unwrapOutputReferences = outputReferences;
+        }
         const encodedBatchSwap = Relayer.encodeBatchSwap({
             swapType: SwapType.SwapExactIn,
             swaps: queryResult.swaps,
@@ -8154,23 +8165,25 @@ class Relayer {
             limits: limits.map((l) => l.toString()),
             deadline: MaxUint256,
             value: '0',
-            outputReferences: [],
+            outputReferences: unwrapOutputReferences,
         });
         // Return amounts from swap
-        const calls = [exitCall, encodedBatchSwap];
+        const calls = [exitCall, encodedBatchSwap, ...additionalCalls];
         return {
             function: 'multicall',
             params: calls,
             outputs: {
+                //TODO: return amounts should get adjusted by wrapped token rates
                 amountsOut: queryResult.returnAmounts,
             },
         };
     }
-    async joinPool({ poolId, joinType, tokens, bptOut, fetchPools, slippage, funds, }) {
+    async joinPool({ poolId, tokens, bptOut, fetchPools, slippage, funds, }) {
         const pool = this.getRequiredPool(poolId);
         const nestedLinearPools = this.getNestedLinearPools(pool);
         const calls = [];
         let batchSwapAssets = [];
+        //TODO: if there are no nested pools, we don't need to use the batch relayer
         if (nestedLinearPools.length > 0) {
             //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
             const tokensIn = nestedLinearPools.map((item) => item.mainToken);
@@ -8178,22 +8191,19 @@ class Relayer {
             const amounts = tokensIn.map((tokenAddress) => {
                 const token = tokens.find((token) => token.address.toLowerCase() ===
                     tokenAddress.toLowerCase());
-                return (token === null || token === void 0 ? void 0 : token.amount) || '0';
+                return this.getTokenAmountScaled(tokenAddress, (token === null || token === void 0 ? void 0 : token.amount) || '0');
             });
-            const swapType = joinType === 'exact-in'
-                ? SwapType.SwapExactIn
-                : SwapType.SwapExactOut;
             const queryResult = await this.swaps.queryBatchSwapWithSor({
                 tokensIn,
                 tokensOut,
-                swapType,
+                swapType: SwapType.SwapExactIn,
                 amounts,
                 fetchPools,
             });
             batchSwapAssets = queryResult.assets;
             const limits = Swaps.getLimitsForSlippage(tokensIn, tokensOut, SwapType.SwapExactIn, queryResult.deltas, queryResult.assets, slippage);
             const encodedBatchSwap = Relayer.encodeBatchSwap({
-                swapType,
+                swapType: SwapType.SwapExactIn,
                 swaps: queryResult.swaps,
                 assets: queryResult.assets,
                 funds,
@@ -8212,7 +8222,7 @@ class Relayer {
             const amountsIn = pool.tokensList.map((tokenAddress) => {
                 const token = tokens.find((token) => token.address === tokenAddress);
                 if (token) {
-                    return token.amount;
+                    return this.getTokenAmountScaled(tokenAddress, (token === null || token === void 0 ? void 0 : token.amount) || '0');
                 }
                 //This token is a nested BPT, not a mainToken
                 //Replace the amount with the chained reference value
@@ -8238,9 +8248,7 @@ class Relayer {
         return {
             function: 'multicall',
             params: calls,
-            outputs: {
-            //amountsOut: amountsUnwrapped,
-            },
+            outputs: {},
         };
     }
     getNestedLinearPools(pool) {
@@ -8252,6 +8260,7 @@ class Relayer {
                 linearPools.push({
                     pool: linearPool,
                     mainToken: linearPool.tokensList[mainIdx],
+                    wrappedToken: linearPool.tokensList[linearPool.wrappedIndex || 0],
                     poolTokenAddress: linearPool.address,
                 });
             }
@@ -8264,6 +8273,7 @@ class Relayer {
                         linearPools.push({
                             pool: linearPool,
                             mainToken: linearPool.tokensList[mainIdx],
+                            wrappedToken: linearPool.tokensList[linearPool.wrappedIndex || 0],
                             poolTokenAddress: this.stablePhantomMap[token].address,
                         });
                     }
@@ -8280,6 +8290,31 @@ class Relayer {
         }
         return pool;
     }
+    getRequiredLinearPoolForWrappedToken(wrappedToken) {
+        const pools = this.getPools();
+        const pool = pools.find((pool) => typeof pool.wrappedIndex === 'number' &&
+            pool.tokensList[pool.wrappedIndex] === wrappedToken);
+        if (!pool) {
+            throw new Error('No linear pool found for wrapped token: ' + wrappedToken);
+        }
+        return pool;
+    }
+    getTokenAmountScaled(tokenAddress, amount) {
+        const pools = this.getPools();
+        const tokens = flatten(pools.map((pool) => pool.tokens));
+        const token = tokens.find((token) => { var _a; return ((_a = token.address) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === tokenAddress.toLowerCase(); });
+        if (!token) {
+            throw new Error('No token found with address: ' + tokenAddress);
+        }
+        return parseFixed(amount, token.decimals).toString();
+    }
+    getLinearPoolType(pool) {
+        const linearFactories = this.config.addresses.linearFactories;
+        if (linearFactories && pool.factory && linearFactories[pool.factory]) {
+            return linearFactories[pool.factory];
+        }
+        return 'aave';
+    }
     /**
      * swapUnwrapExactIn Finds swaps for tokenIn>wrapped tokens and chains with unwrap to underlying stable.
      * @param {string[]} tokensIn - array to token addresses for swapping as tokens in.
@@ -8288,11 +8323,10 @@ class Relayer {
      * @param {string[]} rates - The rate used to convert wrappedToken to underlying.
      * @param {FundManagement} funds - Funding info for swap. Note - recipient should be relayer and sender should be caller.
      * @param {string} slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
-     * @param {UnwrapType} unwrapType - Type of unwrap to perform
      * @param {FetchPoolsInput} fetchPools - Set whether SOR will fetch updated pool info.
      * @returns Transaction data with calldata. Outputs.amountsOut has final amounts out of unwrapped tokens.
      */
-    async swapUnwrapExactIn(tokensIn, wrappedTokens, amountsIn, rates, funds, slippage, unwrapType, fetchPools = {
+    async swapUnwrapExactIn(tokensIn, wrappedTokens, amountsIn, rates, funds, slippage, fetchPools = {
         fetchPools: true,
         fetchOnChain: false,
     }) {
@@ -8308,7 +8342,7 @@ class Relayer {
         const limits = Swaps.getLimitsForSlippage(tokensIn, // tokensIn
         wrappedTokens, // tokensOut
         SwapType.SwapExactIn, queryResult.deltas, queryResult.assets, slippage);
-        const calls = this.encodeSwapUnwrap(wrappedTokens, SwapType.SwapExactIn, queryResult.swaps, queryResult.assets, funds, limits, unwrapType);
+        const calls = this.encodeSwapUnwrap(wrappedTokens, SwapType.SwapExactIn, queryResult.swaps, queryResult.assets, funds, limits);
         const amountsUnwrapped = queryResult.returnAmounts.map((amountWrapped, i) => BigNumber.from(amountWrapped)
             .abs()
             .mul(rates[i])
@@ -8330,11 +8364,10 @@ class Relayer {
      * @param {string[]} rates - The rate used to convert wrappedToken to underlying.
      * @param {FundManagement} funds - Funding info for swap. Note - recipient should be relayer and sender should be caller.
      * @param {string} slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
-     * @param {UnwrapType} unwrapType - Type of unwrap to perform
      * @param {FetchPoolsInput} fetchPools - Set whether SOR will fetch updated pool info.
      * @returns Transaction data with calldata. Outputs.amountsIn has the amounts of tokensIn.
      */
-    async swapUnwrapExactOut(tokensIn, wrappedTokens, amountsUnwrapped, rates, funds, slippage, unwrapType, fetchPools = {
+    async swapUnwrapExactOut(tokensIn, wrappedTokens, amountsUnwrapped, rates, funds, slippage, fetchPools = {
         fetchPools: true,
         fetchOnChain: false,
     }) {
@@ -8354,7 +8387,7 @@ class Relayer {
         const limits = Swaps.getLimitsForSlippage(tokensIn, // tokensIn
         wrappedTokens, // tokensOut
         SwapType.SwapExactOut, queryResult.deltas, queryResult.assets, slippage);
-        const calls = this.encodeSwapUnwrap(wrappedTokens, SwapType.SwapExactOut, queryResult.swaps, queryResult.assets, funds, limits, unwrapType);
+        const calls = this.encodeSwapUnwrap(wrappedTokens, SwapType.SwapExactOut, queryResult.swaps, queryResult.assets, funds, limits);
         return {
             function: 'multicall',
             params: calls,
@@ -8371,15 +8404,30 @@ class Relayer {
      * @param assets
      * @param funds
      * @param limits
-     * @param unwrapType
      * @returns
      */
-    encodeSwapUnwrap(wrappedTokens, swapType, swaps, assets, funds, limits, unwrapType) {
+    encodeSwapUnwrap(wrappedTokens, swapType, swaps, assets, funds, limits) {
         // Output of swaps (wrappedTokens) is used as input to unwrap
         // Need indices of output tokens and outputReferences need to be made with those as key
+        const { unwrapCalls, outputReferences } = this.encodeUnwrapCalls(wrappedTokens, assets, funds);
+        const encodedBatchSwap = Relayer.encodeBatchSwap({
+            swapType: swapType,
+            swaps: swaps,
+            assets: assets,
+            funds: funds,
+            limits: limits.map((l) => l.toString()),
+            deadline: MaxUint256,
+            value: '0',
+            outputReferences: outputReferences,
+        });
+        return [encodedBatchSwap, ...unwrapCalls];
+    }
+    encodeUnwrapCalls(wrappedTokens, assets, funds) {
         const outputReferences = [];
         const unwrapCalls = [];
         wrappedTokens.forEach((wrappedToken, i) => {
+            const linearPool = this.getRequiredLinearPoolForWrappedToken(wrappedToken);
+            const linearPoolType = this.getLinearPoolType(linearPool);
             // Find index of wrappedToken in asset array. This is used as ref in Relayer.
             const index = assets.findIndex((token) => token.toLowerCase() === wrappedToken.toLowerCase());
             // There may be cases where swap isn't possible for wrappedToken
@@ -8391,7 +8439,7 @@ class Relayer {
                 key: key,
             });
             // console.log(`Unwrapping ${wrappedToken} with amt: ${key.toHexString()}`);
-            switch (unwrapType) {
+            switch (linearPoolType) {
                 case 'aave':
                     unwrapCalls.push(Relayer.encodeUnwrapAaveStaticToken({
                         staticToken: wrappedToken,
@@ -8413,17 +8461,7 @@ class Relayer {
                     break;
             }
         });
-        const encodedBatchSwap = Relayer.encodeBatchSwap({
-            swapType: swapType,
-            swaps: swaps,
-            assets: assets,
-            funds: funds,
-            limits: limits.map((l) => l.toString()),
-            deadline: MaxUint256,
-            value: '0',
-            outputReferences: outputReferences,
-        });
-        return [encodedBatchSwap, ...unwrapCalls];
+        return { unwrapCalls, outputReferences };
     }
 }
 Relayer.CHAINED_REFERENCE_PREFIX = 'ba10';
@@ -8445,7 +8483,7 @@ class BalancerSDK {
         this.sor = new Sor(this.config);
         this.subgraph = new Subgraph(this.config);
         this.swaps = new Swaps(this.sor);
-        this.relayer = new Relayer(this.swaps);
+        this.relayer = new Relayer(this.swaps, this.networkConfig);
     }
     get networkConfig() {
         return getNetworkConfig(this.config);

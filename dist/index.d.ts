@@ -169,6 +169,7 @@ interface BalancerSdkSorConfig {
     poolDataService: 'subgraph' | PoolDataService;
     fetchOnChainBalances: boolean;
 }
+declare type BalancerLinearPoolType = 'aave' | 'yearn';
 interface BalancerNetworkConfig {
     chainId: Network;
     addresses: {
@@ -178,6 +179,9 @@ interface BalancerNetworkConfig {
         };
         tokens: {
             wrappedNativeAsset: string;
+        };
+        linearFactories?: {
+            [address: string]: BalancerLinearPoolType;
         };
     };
     urls: {
@@ -543,34 +547,35 @@ interface ExitAndBatchSwapInput {
     exitTokens: string[];
     userData: string;
     expectedAmountsOut: string[];
-    finalTokensOut: string[];
+    batchSwapTokensOut: string[];
     slippage: string;
     fetchPools: FetchPoolsInput;
+    unwrap?: boolean;
 }
 declare type ExitPoolData = ExitPoolRequest & EncodeExitPoolInput;
-declare type UnwrapType = 'aave' | 'yearn';
 interface NestedLinearPool {
     pool: SubgraphPoolBase;
     mainToken: string;
     poolTokenAddress: string;
+    wrappedToken: string;
 }
 interface BatchRelayerJoinPool {
     poolId: string;
-    joinType: 'exact-in' | 'exact-out';
     tokens: {
         address: string;
         amount: string;
     }[];
     bptOut: string;
-    fetchPools: FetchPoolsInput;
     slippage: string;
     funds: FundManagement;
+    fetchPools: FetchPoolsInput;
 }
 
 declare class Relayer {
     private readonly swaps;
+    private readonly config;
     static CHAINED_REFERENCE_PREFIX: string;
-    constructor(swapsOrConfig: Swaps | BalancerSdkConfig);
+    constructor(swaps: Swaps, config: BalancerNetworkConfig);
     static encodeBatchSwap(params: EncodeBatchSwapInput): string;
     static encodeExitPool(params: EncodeExitPoolInput): string;
     static encodeJoinPool(params: EncodeJoinPoolInput): string;
@@ -588,25 +593,31 @@ declare class Relayer {
     getPools(): SubgraphPoolBase[];
     private get poolMap();
     private get linearPoolMap();
+    private get linearPoolWrappedTokenMap();
     private get stablePhantomMap();
     /**
      * exitPoolAndBatchSwap Chains poolExit with batchSwap to final tokens.
      * @param {ExitAndBatchSwapInput} params
-     * @param {string} exiter - Address used to exit pool.
-     * @param {string} swapRecipient - Address that receives final tokens.
-     * @param {string} poolId - Id of pool being exited.
-     * @param {string[]} exitTokens - Array containing addresses of tokens to receive after exiting pool. (must have the same length and order as the array returned by `getPoolTokens`.)
-     * @param {string} userData - Encoded exitPool data.
-     * @param {string[]} expectedAmountsOut - Expected amounts of exitTokens to receive when exiting pool.
-     * @param {string[]} finalTokensOut - Array containing the addresses of the final tokens out.
-     * @param {string} slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
-     * @param {FetchPoolsInput} fetchPools - Set whether SOR will fetch updated pool info.
-     * @returns Transaction data with calldata. Outputs.amountsOut has amounts of finalTokensOut returned.
+     * @param {string} params.exiter - Address used to exit pool.
+     * @param {string} params.swapRecipient - Address that receives final tokens.
+     * @param {string} params.poolId - Id of pool being exited.
+     * @param {string[]} params.exitTokens - Array containing addresses of tokens to receive after exiting pool. (must have the same length and order as the array returned by `getPoolTokens`.)
+     * @param {string} params.userData - Encoded exitPool data.
+     * @param {string[]} params.expectedAmountsOut - Expected amounts of exitTokens to receive when exiting pool.
+     * @param {string[]} params.batchSwapTokensIn - Array containing the addresses of the input to the batchSwap.
+     * @param {string[]} params.batchSwapTokensOut - Array containing the addresses of the output tokens from the batchSwap.
+     * @param {string} params.slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
+     * @param {string} params.unwrap - Whether an unrwap should be applied to any wrapped tokens in batchSwapTokensOut
+     * @param {FetchPoolsInput} params.fetchPools - Set whether SOR will fetch updated pool info.
+     * @returns Transaction data with calldata. Outputs.amountsOut has amounts of batchSwapTokensOut returned.
      */
     exitPoolAndBatchSwap(params: ExitAndBatchSwapInput): Promise<TransactionData>;
-    joinPool({ poolId, joinType, tokens, bptOut, fetchPools, slippage, funds, }: BatchRelayerJoinPool): Promise<TransactionData>;
+    joinPool({ poolId, tokens, bptOut, fetchPools, slippage, funds, }: BatchRelayerJoinPool): Promise<TransactionData>;
     private getNestedLinearPools;
     private getRequiredPool;
+    private getRequiredLinearPoolForWrappedToken;
+    private getTokenAmountScaled;
+    private getLinearPoolType;
     /**
      * swapUnwrapExactIn Finds swaps for tokenIn>wrapped tokens and chains with unwrap to underlying stable.
      * @param {string[]} tokensIn - array to token addresses for swapping as tokens in.
@@ -615,11 +626,10 @@ declare class Relayer {
      * @param {string[]} rates - The rate used to convert wrappedToken to underlying.
      * @param {FundManagement} funds - Funding info for swap. Note - recipient should be relayer and sender should be caller.
      * @param {string} slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
-     * @param {UnwrapType} unwrapType - Type of unwrap to perform
      * @param {FetchPoolsInput} fetchPools - Set whether SOR will fetch updated pool info.
      * @returns Transaction data with calldata. Outputs.amountsOut has final amounts out of unwrapped tokens.
      */
-    swapUnwrapExactIn(tokensIn: string[], wrappedTokens: string[], amountsIn: string[], rates: string[], funds: FundManagement, slippage: string, unwrapType: UnwrapType, fetchPools?: FetchPoolsInput): Promise<TransactionData>;
+    swapUnwrapExactIn(tokensIn: string[], wrappedTokens: string[], amountsIn: string[], rates: string[], funds: FundManagement, slippage: string, fetchPools?: FetchPoolsInput): Promise<TransactionData>;
     /**
      * swapUnwrapExactOut Finds swaps for tokenIn>wrapped tokens and chains with unwrap to underlying stable.
      * @param {string[]} tokensIn - array to token addresses for swapping as tokens in.
@@ -628,11 +638,10 @@ declare class Relayer {
      * @param {string[]} rates - The rate used to convert wrappedToken to underlying.
      * @param {FundManagement} funds - Funding info for swap. Note - recipient should be relayer and sender should be caller.
      * @param {string} slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
-     * @param {UnwrapType} unwrapType - Type of unwrap to perform
      * @param {FetchPoolsInput} fetchPools - Set whether SOR will fetch updated pool info.
      * @returns Transaction data with calldata. Outputs.amountsIn has the amounts of tokensIn.
      */
-    swapUnwrapExactOut(tokensIn: string[], wrappedTokens: string[], amountsUnwrapped: string[], rates: string[], funds: FundManagement, slippage: string, unwrapType: UnwrapType, fetchPools?: FetchPoolsInput): Promise<TransactionData>;
+    swapUnwrapExactOut(tokensIn: string[], wrappedTokens: string[], amountsUnwrapped: string[], rates: string[], funds: FundManagement, slippage: string, fetchPools?: FetchPoolsInput): Promise<TransactionData>;
     /**
      * Creates encoded multicalls using swap outputs as input amounts for token unwrap.
      * @param wrappedTokens
@@ -641,10 +650,13 @@ declare class Relayer {
      * @param assets
      * @param funds
      * @param limits
-     * @param unwrapType
      * @returns
      */
-    encodeSwapUnwrap(wrappedTokens: string[], swapType: SwapType, swaps: BatchSwapStep[], assets: string[], funds: FundManagement, limits: BigNumberish[], unwrapType: UnwrapType): string[];
+    encodeSwapUnwrap(wrappedTokens: string[], swapType: SwapType, swaps: BatchSwapStep[], assets: string[], funds: FundManagement, limits: BigNumberish[]): string[];
+    encodeUnwrapCalls(wrappedTokens: string[], assets: string[], funds: FundManagement): {
+        unwrapCalls: string[];
+        outputReferences: OutputReference[];
+    };
 }
 
 declare type Maybe<T> = T | null;
@@ -1415,11 +1427,11 @@ declare type PoolsQuery = {
         __typename?: 'Pool';
         id: string;
         address: string;
-        poolType?: string | null | undefined;
-        symbol?: string | null | undefined;
-        name?: string | null | undefined;
+        poolType?: string | null;
+        symbol?: string | null;
+        name?: string | null;
         swapFee: string;
-        totalWeight?: string | null | undefined;
+        totalWeight?: string | null;
         totalSwapVolume: string;
         totalSwapFee: string;
         totalLiquidity: string;
@@ -1427,16 +1439,17 @@ declare type PoolsQuery = {
         swapsCount: string;
         holdersCount: string;
         tokensList: Array<string>;
-        amp?: string | null | undefined;
-        expiryTime?: string | null | undefined;
-        unitSeconds?: string | null | undefined;
-        principalToken?: string | null | undefined;
-        baseToken?: string | null | undefined;
+        amp?: string | null;
+        expiryTime?: string | null;
+        unitSeconds?: string | null;
+        principalToken?: string | null;
+        baseToken?: string | null;
         swapEnabled: boolean;
-        wrappedIndex?: number | null | undefined;
-        mainIndex?: number | null | undefined;
-        lowerTarget?: string | null | undefined;
-        upperTarget?: string | null | undefined;
+        wrappedIndex?: number | null;
+        mainIndex?: number | null;
+        lowerTarget?: string | null;
+        upperTarget?: string | null;
+        factory?: string | null;
         tokens?: Array<{
             __typename?: 'PoolToken';
             id: string;
@@ -1446,9 +1459,9 @@ declare type PoolsQuery = {
             address: string;
             balance: string;
             invested: string;
-            weight?: string | null | undefined;
+            weight?: string | null;
             priceRate: string;
-        }> | null | undefined;
+        }> | null;
     }>;
 };
 declare type PoolQueryVariables = Exact<{
@@ -1461,11 +1474,11 @@ declare type PoolQuery = {
         __typename?: 'Pool';
         id: string;
         address: string;
-        poolType?: string | null | undefined;
-        symbol?: string | null | undefined;
-        name?: string | null | undefined;
+        poolType?: string | null;
+        symbol?: string | null;
+        name?: string | null;
         swapFee: string;
-        totalWeight?: string | null | undefined;
+        totalWeight?: string | null;
         totalSwapVolume: string;
         totalSwapFee: string;
         totalLiquidity: string;
@@ -1473,16 +1486,17 @@ declare type PoolQuery = {
         swapsCount: string;
         holdersCount: string;
         tokensList: Array<string>;
-        amp?: string | null | undefined;
-        expiryTime?: string | null | undefined;
-        unitSeconds?: string | null | undefined;
-        principalToken?: string | null | undefined;
-        baseToken?: string | null | undefined;
+        amp?: string | null;
+        expiryTime?: string | null;
+        unitSeconds?: string | null;
+        principalToken?: string | null;
+        baseToken?: string | null;
         swapEnabled: boolean;
-        wrappedIndex?: number | null | undefined;
-        mainIndex?: number | null | undefined;
-        lowerTarget?: string | null | undefined;
-        upperTarget?: string | null | undefined;
+        wrappedIndex?: number | null;
+        mainIndex?: number | null;
+        lowerTarget?: string | null;
+        upperTarget?: string | null;
+        factory?: string | null;
         tokens?: Array<{
             __typename?: 'PoolToken';
             id: string;
@@ -1492,10 +1506,10 @@ declare type PoolQuery = {
             address: string;
             balance: string;
             invested: string;
-            weight?: string | null | undefined;
+            weight?: string | null;
             priceRate: string;
-        }> | null | undefined;
-    } | null | undefined;
+        }> | null;
+    } | null;
 };
 declare type PoolsWithoutLinearQuery = {
     __typename?: 'Query';
@@ -1503,11 +1517,11 @@ declare type PoolsWithoutLinearQuery = {
         __typename?: 'Pool';
         id: string;
         address: string;
-        poolType?: string | null | undefined;
-        symbol?: string | null | undefined;
-        name?: string | null | undefined;
+        poolType?: string | null;
+        symbol?: string | null;
+        name?: string | null;
         swapFee: string;
-        totalWeight?: string | null | undefined;
+        totalWeight?: string | null;
         totalSwapVolume: string;
         totalSwapFee: string;
         totalLiquidity: string;
@@ -1515,11 +1529,11 @@ declare type PoolsWithoutLinearQuery = {
         swapsCount: string;
         holdersCount: string;
         tokensList: Array<string>;
-        amp?: string | null | undefined;
-        expiryTime?: string | null | undefined;
-        unitSeconds?: string | null | undefined;
-        principalToken?: string | null | undefined;
-        baseToken?: string | null | undefined;
+        amp?: string | null;
+        expiryTime?: string | null;
+        unitSeconds?: string | null;
+        principalToken?: string | null;
+        baseToken?: string | null;
         swapEnabled: boolean;
         tokens?: Array<{
             __typename?: 'PoolToken';
@@ -1530,9 +1544,9 @@ declare type PoolsWithoutLinearQuery = {
             address: string;
             balance: string;
             invested: string;
-            weight?: string | null | undefined;
+            weight?: string | null;
             priceRate: string;
-        }> | null | undefined;
+        }> | null;
     }>;
 };
 declare type PoolWithoutLinearQueryVariables = Exact<{
@@ -1545,11 +1559,11 @@ declare type PoolWithoutLinearQuery = {
         __typename?: 'Pool';
         id: string;
         address: string;
-        poolType?: string | null | undefined;
-        symbol?: string | null | undefined;
-        name?: string | null | undefined;
+        poolType?: string | null;
+        symbol?: string | null;
+        name?: string | null;
         swapFee: string;
-        totalWeight?: string | null | undefined;
+        totalWeight?: string | null;
         totalSwapVolume: string;
         totalSwapFee: string;
         totalLiquidity: string;
@@ -1557,11 +1571,11 @@ declare type PoolWithoutLinearQuery = {
         swapsCount: string;
         holdersCount: string;
         tokensList: Array<string>;
-        amp?: string | null | undefined;
-        expiryTime?: string | null | undefined;
-        unitSeconds?: string | null | undefined;
-        principalToken?: string | null | undefined;
-        baseToken?: string | null | undefined;
+        amp?: string | null;
+        expiryTime?: string | null;
+        unitSeconds?: string | null;
+        principalToken?: string | null;
+        baseToken?: string | null;
         swapEnabled: boolean;
         tokens?: Array<{
             __typename?: 'PoolToken';
@@ -1572,10 +1586,10 @@ declare type PoolWithoutLinearQuery = {
             address: string;
             balance: string;
             invested: string;
-            weight?: string | null | undefined;
+            weight?: string | null;
             priceRate: string;
-        }> | null | undefined;
-    } | null | undefined;
+        }> | null;
+    } | null;
 };
 declare type PoolHistoricalLiquiditiesQuery = {
     __typename?: 'Query';
@@ -1687,7 +1701,7 @@ declare type TokenLatestPriceQuery = {
             __typename?: 'Pool';
             id: string;
         };
-    } | null | undefined;
+    } | null;
 };
 declare type UserQueryVariables = Exact<{
     id: Scalars['ID'];
@@ -1705,8 +1719,8 @@ declare type UserQuery = {
                 __typename?: 'Pool';
                 id: string;
             };
-        }> | null | undefined;
-    } | null | undefined;
+        }> | null;
+    } | null;
 };
 declare type UsersQuery = {
     __typename?: 'Query';
@@ -1720,7 +1734,7 @@ declare type UsersQuery = {
                 __typename?: 'Pool';
                 id: string;
             };
-        }> | null | undefined;
+        }> | null;
     }>;
 };
 declare type SdkFunctionWrapper = <T>(action: (requestHeaders?: Record<string, string>) => Promise<T>, operationName: string) => Promise<T>;
@@ -1831,4 +1845,4 @@ declare class BalancerSDK {
     get networkConfig(): BalancerNetworkConfig;
 }
 
-export { AaveHelpers, Account, AssetHelpers, BalancerErrors, BalancerNetworkConfig, BalancerSDK, BalancerSdkConfig, BalancerSdkSorConfig, BatchRelayerJoinPool, BatchSwap, BatchSwapStep, EncodeBatchSwapInput, EncodeExitPoolInput, EncodeJoinPoolInput, EncodeUnwrapAaveStaticTokenInput, EncodeUnwrapYearnVaultTokenInput, ExitAndBatchSwapInput, ExitPoolData, ExitPoolRequest, FetchPoolsInput, FundManagement, JoinPoolRequest, ManagedPoolEncoder, NestedLinearPool, Network, OutputReference, PoolBalanceOp, PoolBalanceOpKind, PoolReference, PoolSpecialization, QueryWithSorInput, QueryWithSorOutput, Relayer, RelayerAction, RelayerAuthorization, SingleSwap, Sor, StablePhantomPoolJoinKind, StablePoolEncoder, StablePoolExitKind, StablePoolJoinKind, Subgraph, Swap, SwapType, Swaps, TransactionData, UnwrapType, UserBalanceOp, UserBalanceOpKind, WeightedPoolEncoder, WeightedPoolExitKind, WeightedPoolJoinKind, accountToAddress, getLimitsForSlippage, getPoolAddress, getPoolNonce, getPoolSpecialization, isNormalizedWeights, isSameAddress, signPermit, splitPoolId, toNormalizedWeights };
+export { AaveHelpers, Account, AssetHelpers, BalancerErrors, BalancerLinearPoolType, BalancerNetworkConfig, BalancerSDK, BalancerSdkConfig, BalancerSdkSorConfig, BatchRelayerJoinPool, BatchSwap, BatchSwapStep, EncodeBatchSwapInput, EncodeExitPoolInput, EncodeJoinPoolInput, EncodeUnwrapAaveStaticTokenInput, EncodeUnwrapYearnVaultTokenInput, ExitAndBatchSwapInput, ExitPoolData, ExitPoolRequest, FetchPoolsInput, FundManagement, JoinPoolRequest, ManagedPoolEncoder, NestedLinearPool, Network, OutputReference, PoolBalanceOp, PoolBalanceOpKind, PoolReference, PoolSpecialization, QueryWithSorInput, QueryWithSorOutput, Relayer, RelayerAction, RelayerAuthorization, SingleSwap, Sor, StablePhantomPoolJoinKind, StablePoolEncoder, StablePoolExitKind, StablePoolJoinKind, Subgraph, Swap, SwapType, Swaps, TransactionData, UserBalanceOp, UserBalanceOpKind, WeightedPoolEncoder, WeightedPoolExitKind, WeightedPoolJoinKind, accountToAddress, getLimitsForSlippage, getPoolAddress, getPoolNonce, getPoolSpecialization, isNormalizedWeights, isSameAddress, signPermit, splitPoolId, toNormalizedWeights };
