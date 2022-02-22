@@ -79,6 +79,7 @@ fragment SubgraphPool on Pool {
     mainIndex
     lowerTarget
     upperTarget
+    factory
 }
 
 fragment SubgraphPoolWithoutLinear on Pool {

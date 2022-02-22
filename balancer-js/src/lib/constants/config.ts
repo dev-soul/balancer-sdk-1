@@ -15,6 +15,9 @@ export const BALANCER_NETWORK_CONFIG: Record<Network, BalancerNetworkConfig> = {
                 wrappedNativeAsset:
                     '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
             },
+            linearFactories: {
+                '0xd7fad3bd59d6477cbe1be7f646f7f1ba25b230f8': 'aave',
+            },
         },
         urls: {
             subgraph:

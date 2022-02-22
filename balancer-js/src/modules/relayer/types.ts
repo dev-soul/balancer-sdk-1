@@ -67,30 +67,29 @@ export interface ExitAndBatchSwapInput {
     exitTokens: string[];
     userData: string;
     expectedAmountsOut: string[];
-    finalTokensOut: string[];
+    batchSwapTokensOut: string[];
     slippage: string;
     fetchPools: FetchPoolsInput;
+    unwrap?: boolean;
 }
 
 export type ExitPoolData = ExitPoolRequest & EncodeExitPoolInput;
-
-export type UnwrapType = 'aave' | 'yearn';
 
 export interface NestedLinearPool {
     pool: SubgraphPoolBase;
     mainToken: string;
     poolTokenAddress: string;
+    wrappedToken: string;
 }
 
 export interface BatchRelayerJoinPool {
     poolId: string;
-    joinType: 'exact-in' | 'exact-out';
     tokens: {
         address: string;
         amount: string;
     }[];
     bptOut: string;
-    fetchPools: FetchPoolsInput;
     slippage: string;
     funds: FundManagement;
+    fetchPools: FetchPoolsInput;
 }

@@ -3118,7 +3118,7 @@ export type PoolsQueryVariables = Exact<{
 }>;
 
 
-export type PoolsQuery = { __typename?: 'Query', pools: Array<{ __typename?: 'Pool', id: string, address: string, poolType?: string | null | undefined, symbol?: string | null | undefined, name?: string | null | undefined, swapFee: string, totalWeight?: string | null | undefined, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null | undefined, expiryTime?: string | null | undefined, unitSeconds?: string | null | undefined, principalToken?: string | null | undefined, baseToken?: string | null | undefined, swapEnabled: boolean, wrappedIndex?: number | null | undefined, mainIndex?: number | null | undefined, lowerTarget?: string | null | undefined, upperTarget?: string | null | undefined, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null | undefined, priceRate: string }> | null | undefined }> };
+export type PoolsQuery = { __typename?: 'Query', pools: Array<{ __typename?: 'Pool', id: string, address: string, poolType?: string | null, symbol?: string | null, name?: string | null, swapFee: string, totalWeight?: string | null, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null, expiryTime?: string | null, unitSeconds?: string | null, principalToken?: string | null, baseToken?: string | null, swapEnabled: boolean, wrappedIndex?: number | null, mainIndex?: number | null, lowerTarget?: string | null, upperTarget?: string | null, factory?: string | null, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null, priceRate: string }> | null }> };
 
 export type PoolQueryVariables = Exact<{
   id: Scalars['ID'];
@@ -3126,7 +3126,7 @@ export type PoolQueryVariables = Exact<{
 }>;
 
 
-export type PoolQuery = { __typename?: 'Query', pool?: { __typename?: 'Pool', id: string, address: string, poolType?: string | null | undefined, symbol?: string | null | undefined, name?: string | null | undefined, swapFee: string, totalWeight?: string | null | undefined, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null | undefined, expiryTime?: string | null | undefined, unitSeconds?: string | null | undefined, principalToken?: string | null | undefined, baseToken?: string | null | undefined, swapEnabled: boolean, wrappedIndex?: number | null | undefined, mainIndex?: number | null | undefined, lowerTarget?: string | null | undefined, upperTarget?: string | null | undefined, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null | undefined, priceRate: string }> | null | undefined } | null | undefined };
+export type PoolQuery = { __typename?: 'Query', pool?: { __typename?: 'Pool', id: string, address: string, poolType?: string | null, symbol?: string | null, name?: string | null, swapFee: string, totalWeight?: string | null, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null, expiryTime?: string | null, unitSeconds?: string | null, principalToken?: string | null, baseToken?: string | null, swapEnabled: boolean, wrappedIndex?: number | null, mainIndex?: number | null, lowerTarget?: string | null, upperTarget?: string | null, factory?: string | null, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null, priceRate: string }> | null } | null };
 
 export type PoolsWithoutLinearQueryVariables = Exact<{
   skip?: InputMaybe<Scalars['Int']>;
@@ -3138,7 +3138,7 @@ export type PoolsWithoutLinearQueryVariables = Exact<{
 }>;
 
 
-export type PoolsWithoutLinearQuery = { __typename?: 'Query', pools: Array<{ __typename?: 'Pool', id: string, address: string, poolType?: string | null | undefined, symbol?: string | null | undefined, name?: string | null | undefined, swapFee: string, totalWeight?: string | null | undefined, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null | undefined, expiryTime?: string | null | undefined, unitSeconds?: string | null | undefined, principalToken?: string | null | undefined, baseToken?: string | null | undefined, swapEnabled: boolean, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null | undefined, priceRate: string }> | null | undefined }> };
+export type PoolsWithoutLinearQuery = { __typename?: 'Query', pools: Array<{ __typename?: 'Pool', id: string, address: string, poolType?: string | null, symbol?: string | null, name?: string | null, swapFee: string, totalWeight?: string | null, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null, expiryTime?: string | null, unitSeconds?: string | null, principalToken?: string | null, baseToken?: string | null, swapEnabled: boolean, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null, priceRate: string }> | null }> };
 
 export type PoolWithoutLinearQueryVariables = Exact<{
   id: Scalars['ID'];
@@ -3146,13 +3146,13 @@ export type PoolWithoutLinearQueryVariables = Exact<{
 }>;
 
 
-export type PoolWithoutLinearQuery = { __typename?: 'Query', pool?: { __typename?: 'Pool', id: string, address: string, poolType?: string | null | undefined, symbol?: string | null | undefined, name?: string | null | undefined, swapFee: string, totalWeight?: string | null | undefined, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null | undefined, expiryTime?: string | null | undefined, unitSeconds?: string | null | undefined, principalToken?: string | null | undefined, baseToken?: string | null | undefined, swapEnabled: boolean, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null | undefined, priceRate: string }> | null | undefined } | null | undefined };
+export type PoolWithoutLinearQuery = { __typename?: 'Query', pool?: { __typename?: 'Pool', id: string, address: string, poolType?: string | null, symbol?: string | null, name?: string | null, swapFee: string, totalWeight?: string | null, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null, expiryTime?: string | null, unitSeconds?: string | null, principalToken?: string | null, baseToken?: string | null, swapEnabled: boolean, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null, priceRate: string }> | null } | null };
 
-export type SubgraphPoolFragment = { __typename?: 'Pool', id: string, address: string, poolType?: string | null | undefined, symbol?: string | null | undefined, name?: string | null | undefined, swapFee: string, totalWeight?: string | null | undefined, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null | undefined, expiryTime?: string | null | undefined, unitSeconds?: string | null | undefined, principalToken?: string | null | undefined, baseToken?: string | null | undefined, swapEnabled: boolean, wrappedIndex?: number | null | undefined, mainIndex?: number | null | undefined, lowerTarget?: string | null | undefined, upperTarget?: string | null | undefined, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null | undefined, priceRate: string }> | null | undefined };
+export type SubgraphPoolFragment = { __typename?: 'Pool', id: string, address: string, poolType?: string | null, symbol?: string | null, name?: string | null, swapFee: string, totalWeight?: string | null, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null, expiryTime?: string | null, unitSeconds?: string | null, principalToken?: string | null, baseToken?: string | null, swapEnabled: boolean, wrappedIndex?: number | null, mainIndex?: number | null, lowerTarget?: string | null, upperTarget?: string | null, factory?: string | null, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null, priceRate: string }> | null };
 
-export type SubgraphPoolWithoutLinearFragment = { __typename?: 'Pool', id: string, address: string, poolType?: string | null | undefined, symbol?: string | null | undefined, name?: string | null | undefined, swapFee: string, totalWeight?: string | null | undefined, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null | undefined, expiryTime?: string | null | undefined, unitSeconds?: string | null | undefined, principalToken?: string | null | undefined, baseToken?: string | null | undefined, swapEnabled: boolean, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null | undefined, priceRate: string }> | null | undefined };
+export type SubgraphPoolWithoutLinearFragment = { __typename?: 'Pool', id: string, address: string, poolType?: string | null, symbol?: string | null, name?: string | null, swapFee: string, totalWeight?: string | null, totalSwapVolume: string, totalSwapFee: string, totalLiquidity: string, totalShares: string, swapsCount: string, holdersCount: string, tokensList: Array<string>, amp?: string | null, expiryTime?: string | null, unitSeconds?: string | null, principalToken?: string | null, baseToken?: string | null, swapEnabled: boolean, tokens?: Array<{ __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null, priceRate: string }> | null };
 
-export type SubgraphPoolTokenFragment = { __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null | undefined, priceRate: string };
+export type SubgraphPoolTokenFragment = { __typename?: 'PoolToken', id: string, symbol: string, name: string, decimals: number, address: string, balance: string, invested: string, weight?: string | null, priceRate: string };
 
 export type PoolHistoricalLiquiditiesQueryVariables = Exact<{
   skip?: InputMaybe<Scalars['Int']>;
@@ -3239,7 +3239,7 @@ export type TokenLatestPriceQueryVariables = Exact<{
 }>;
 
 
-export type TokenLatestPriceQuery = { __typename?: 'Query', latestPrice?: { __typename?: 'LatestPrice', id: string, asset: string, price: string, pricingAsset: string, poolId: { __typename?: 'Pool', id: string } } | null | undefined };
+export type TokenLatestPriceQuery = { __typename?: 'Query', latestPrice?: { __typename?: 'LatestPrice', id: string, asset: string, price: string, pricingAsset: string, poolId: { __typename?: 'Pool', id: string } } | null };
 
 export type SubgraphTokenLatestPriceFragment = { __typename?: 'LatestPrice', id: string, asset: string, price: string, pricingAsset: string, poolId: { __typename?: 'Pool', id: string } };
 
@@ -3249,7 +3249,7 @@ export type UserQueryVariables = Exact<{
 }>;
 
 
-export type UserQuery = { __typename?: 'Query', user?: { __typename?: 'User', id: string, sharesOwned?: Array<{ __typename?: 'PoolShare', balance: string, poolId: { __typename?: 'Pool', id: string } }> | null | undefined } | null | undefined };
+export type UserQuery = { __typename?: 'Query', user?: { __typename?: 'User', id: string, sharesOwned?: Array<{ __typename?: 'PoolShare', balance: string, poolId: { __typename?: 'Pool', id: string } }> | null } | null };
 
 export type UsersQueryVariables = Exact<{
   skip?: InputMaybe<Scalars['Int']>;
@@ -3261,9 +3261,9 @@ export type UsersQueryVariables = Exact<{
 }>;
 
 
-export type UsersQuery = { __typename?: 'Query', users: Array<{ __typename?: 'User', id: string, sharesOwned?: Array<{ __typename?: 'PoolShare', balance: string, poolId: { __typename?: 'Pool', id: string } }> | null | undefined }> };
+export type UsersQuery = { __typename?: 'Query', users: Array<{ __typename?: 'User', id: string, sharesOwned?: Array<{ __typename?: 'PoolShare', balance: string, poolId: { __typename?: 'Pool', id: string } }> | null }> };
 
-export type SubgraphUserFragment = { __typename?: 'User', id: string, sharesOwned?: Array<{ __typename?: 'PoolShare', balance: string, poolId: { __typename?: 'Pool', id: string } }> | null | undefined };
+export type SubgraphUserFragment = { __typename?: 'User', id: string, sharesOwned?: Array<{ __typename?: 'PoolShare', balance: string, poolId: { __typename?: 'Pool', id: string } }> | null };
 
 export const SubgraphPoolTokenFragmentDoc = gql`
     fragment SubgraphPoolToken on PoolToken {
@@ -3308,6 +3308,7 @@ export const SubgraphPoolFragmentDoc = gql`
   mainIndex
   lowerTarget
   upperTarget
+  factory
 }
     ${SubgraphPoolTokenFragmentDoc}`;
 export const SubgraphPoolWithoutLinearFragmentDoc = gql`

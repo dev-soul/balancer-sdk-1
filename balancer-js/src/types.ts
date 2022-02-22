@@ -25,6 +25,8 @@ export interface BalancerSdkSorConfig {
     fetchOnChainBalances: boolean;
 }
 
+export type BalancerLinearPoolType = 'aave' | 'yearn';
+
 export interface BalancerNetworkConfig {
     chainId: Network;
     addresses: {
@@ -34,6 +36,9 @@ export interface BalancerNetworkConfig {
         };
         tokens: {
             wrappedNativeAsset: string;
+        };
+        linearFactories?: {
+            [address: string]: BalancerLinearPoolType;
         };
     };
     urls: {

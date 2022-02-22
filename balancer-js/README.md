@@ -160,10 +160,10 @@ Chains poolExit with batchSwap to final tokens.
 @param exitTokens - Array containing addresses of tokens to receive after exiting pool. (must have the same length and order as the array returned by `getPoolTokens`.)
 @param userData - Encoded exitPool data.
 @param minExitAmountsOut - Minimum amounts of exitTokens to receive when exiting pool.
-@param finalTokensOut - Array containing the addresses of the final tokens out.
+@param batchSwapTokensOut - Array containing the addresses of the final tokens out.
 @param slippage - Slippage to be applied to swap section. i.e. 5%=50000000000000000.
 @param fetchPools - Set whether SOR will fetch updated pool info.
-@returns Transaction data with calldata. Outputs.amountsOut has amounts of finalTokensOut returned.
+@returns Transaction data with calldata. Outputs.amountsOut has amounts of batchSwapTokensOut returned.
 
 ```js
 async relayer.exitPoolAndBatchSwap(
@@ -174,7 +174,7 @@ async relayer.exitPoolAndBatchSwap(
         exitTokens: string[];
         userData: string;
         minExitAmountsOut: string[];
-        finalTokensOut: string[];
+        batchSwapTokensOut: string[];
         slippage: string;
         fetchPools: FetchPoolsInput;
     }

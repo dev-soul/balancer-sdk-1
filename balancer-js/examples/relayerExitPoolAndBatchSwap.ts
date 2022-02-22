@@ -61,7 +61,7 @@ async function relayerExitPoolAndBatchSwap() {
         exitTokens: [AAVE_USDT.address, AAVE_DAI.address],
         userData,
         expectedAmountsOut,
-        finalTokensOut: [STABAL3PHANTOM.address, STABAL3PHANTOM.address],
+        batchSwapTokensOut: [STABAL3PHANTOM.address, STABAL3PHANTOM.address],
         slippage: '50000000000000000', // Slippage for swap 5%
         fetchPools: {
             fetchPools: true,

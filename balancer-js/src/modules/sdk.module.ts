@@ -15,7 +15,7 @@ export class BalancerSDK {
         this.sor = new Sor(this.config);
         this.subgraph = new Subgraph(this.config);
         this.swaps = new Swaps(this.sor);
-        this.relayer = new Relayer(this.swaps);
+        this.relayer = new Relayer(this.swaps, this.networkConfig);
     }
 
     public get networkConfig(): BalancerNetworkConfig {
