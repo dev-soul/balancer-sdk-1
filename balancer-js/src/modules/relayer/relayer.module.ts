@@ -228,6 +228,9 @@ export class Relayer {
     async exitPoolAndBatchSwap(
         params: ExitAndBatchSwapInput
     ): Promise<TransactionData> {
+        const exitTokens = params.exitTokens.map((exitToken) =>
+            exitToken.toLowerCase()
+        );
         const slippageAmountNegative = WeiPerEther.sub(
             BigNumber.from(params.slippage)
         );
@@ -272,7 +275,8 @@ export class Relayer {
         // Update swap amounts with ref outputs from exitPool
         queryResult.swaps.forEach((swap) => {
             const token = queryResult.assets[swap.assetInIndex];
-            const index = params.exitTokens.indexOf(token);
+            const index = exitTokens.indexOf(token);
+
             if (index !== -1)
                 swap.amount = outputReferences[index].key.toString();
         });
