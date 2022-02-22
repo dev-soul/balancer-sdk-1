@@ -8080,6 +8080,7 @@ class Relayer {
      * @returns Transaction data with calldata. Outputs.amountsOut has amounts of batchSwapTokensOut returned.
      */
     async exitPoolAndBatchSwap(params) {
+        const exitTokens = params.exitTokens.map((exitToken) => exitToken.toLowerCase());
         const slippageAmountNegative = WeiPerEther.sub(BigNumber.from(params.slippage));
         // Set min amounts out of exit pool based on slippage
         const minAmountsOut = params.expectedAmountsOut.map((amt) => BigNumber.from(amt)
@@ -8116,7 +8117,7 @@ class Relayer {
         // Update swap amounts with ref outputs from exitPool
         queryResult.swaps.forEach((swap) => {
             const token = queryResult.assets[swap.assetInIndex];
-            const index = params.exitTokens.indexOf(token);
+            const index = exitTokens.indexOf(token);
             if (index !== -1)
                 swap.amount = outputReferences[index].key.toString();
         });
