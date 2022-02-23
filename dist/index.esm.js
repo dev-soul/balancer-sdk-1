@@ -8157,6 +8157,17 @@ class Relayer {
             const { unwrapCalls, outputReferences } = this.encodeUnwrapCalls(wrappedTokens, queryResult.assets, funds);
             additionalCalls = unwrapCalls;
             unwrapOutputReferences = outputReferences;
+            //update the return amounts to represent the unwrappedAmount
+            queryResult.returnAmounts = queryResult.returnAmounts.map((returnAmount, i) => {
+                const asset = queryResult.assets[i];
+                if (this.linearPoolWrappedTokenMap[asset]) {
+                    const linearPool = this.linearPoolWrappedTokenMap[asset];
+                    const priceRate = linearPool.tokens[linearPool.wrappedIndex || 0]
+                        .priceRate;
+                    return `${parseFloat(returnAmount) * parseFloat(priceRate)}`;
+                }
+                return returnAmount;
+            });
         }
         const encodedBatchSwap = Relayer.encodeBatchSwap({
             swapType: SwapType.SwapExactIn,
@@ -8174,7 +8185,6 @@ class Relayer {
             function: 'multicall',
             params: calls,
             outputs: {
-                //TODO: return amounts should get adjusted by wrapped token rates
                 amountsOut: queryResult.returnAmounts,
             },
         };
