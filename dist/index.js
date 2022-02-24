@@ -823,9 +823,9 @@ async function queryBatchSwapWithSor(sor, vaultContract, queryWithSor) {
         deltas = await queryBatchSwap(vaultContract, queryWithSor.swapType, batchedSwaps.swaps, batchedSwaps.assets);
         if (deltas.length > 0) {
             returnTokens.forEach((t, i) => {
-                var _a;
-                return (returnAmounts[i] =
-                    (_a = deltas[batchedSwaps.assets.indexOf(t.toLowerCase())].toString()) !== null && _a !== void 0 ? _a : constants.Zero.toString());
+                const idx = batchedSwaps.assets.indexOf(t.toLowerCase());
+                returnAmounts[i] =
+                    idx !== -1 ? deltas[idx].toString() : constants.Zero.toString();
             });
         }
     }
@@ -8166,7 +8166,7 @@ class Relayer {
             unwrapOutputReferences = outputReferences;
             //update the return amounts to represent the unwrappedAmount
             queryResult.returnAmounts = queryResult.returnAmounts.map((returnAmount, i) => {
-                const asset = queryResult.assets[i];
+                const asset = params.batchSwapTokensOut[i].toLowerCase();
                 if (this.linearPoolWrappedTokenMap[asset]) {
                     const linearPool = this.linearPoolWrappedTokenMap[asset];
                     const priceRate = linearPool.tokens[linearPool.wrappedIndex || 0]
@@ -8192,7 +8192,12 @@ class Relayer {
             function: 'multicall',
             params: calls,
             outputs: {
-                amountsOut: queryResult.returnAmounts,
+                //Add the slippage back to the amountsOut so that it reflects the expected amount
+                //rather than worst case
+                amountsOut: queryResult.returnAmounts.map((amt) => bignumber.BigNumber.from(amt)
+                    .mul(slippageAmountPositive)
+                    .div(constants.WeiPerEther)
+                    .toString()),
             },
         };
     }
