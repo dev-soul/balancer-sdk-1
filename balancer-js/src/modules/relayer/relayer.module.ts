@@ -342,8 +342,7 @@ export class Relayer {
             //update the return amounts to represent the unwrappedAmount
             queryResult.returnAmounts = queryResult.returnAmounts.map(
                 (returnAmount, i) => {
-                    const asset = queryResult.assets[i];
-
+                    const asset = params.batchSwapTokensOut[i].toLowerCase();
                     if (this.linearPoolWrappedTokenMap[asset]) {
                         const linearPool =
                             this.linearPoolWrappedTokenMap[asset];
@@ -355,7 +354,6 @@ export class Relayer {
                             parseFloat(returnAmount) * parseFloat(priceRate)
                         }`;
                     }
-
                     return returnAmount;
                 }
             );
@@ -378,7 +376,14 @@ export class Relayer {
             function: 'multicall',
             params: calls,
             outputs: {
-                amountsOut: queryResult.returnAmounts,
+                //Add the slippage back to the amountsOut so that it reflects the expected amount
+                //rather than worst case
+                amountsOut: queryResult.returnAmounts.map((amt) =>
+                    BigNumber.from(amt)
+                        .mul(slippageAmountPositive)
+                        .div(WeiPerEther)
+                        .toString()
+                ),
             },
         };
     }

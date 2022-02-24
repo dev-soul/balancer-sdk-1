@@ -88,13 +88,12 @@ export async function queryBatchSwapWithSor(
         );
 
         if (deltas.length > 0) {
-            returnTokens.forEach(
-                (t, i) =>
-                    (returnAmounts[i] =
-                        deltas[
-                            batchedSwaps.assets.indexOf(t.toLowerCase())
-                        ].toString() ?? Zero.toString())
-            );
+            returnTokens.forEach((t, i) => {
+                const idx = batchedSwaps.assets.indexOf(t.toLowerCase());
+
+                returnAmounts[i] =
+                    idx !== -1 ? deltas[idx].toString() : Zero.toString();
+            });
         }
     } catch (err) {
         console.error(`queryBatchSwapTokensIn error: ${err}`);
