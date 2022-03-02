@@ -1,6 +1,11 @@
 import { BigNumber, BigNumberish, parseFixed } from '@ethersproject/bignumber';
 import { Interface } from '@ethersproject/abi';
-import { MaxUint256, WeiPerEther, Zero } from '@ethersproject/constants';
+import {
+    AddressZero,
+    MaxUint256,
+    WeiPerEther,
+    Zero,
+} from '@ethersproject/constants';
 
 import { Swaps } from '@/modules/swaps/swaps.module';
 import {
@@ -403,17 +408,29 @@ export class Relayer {
 
         //TODO: if there are no nested pools, we don't need to use the batch relayer
         if (nestedLinearPools.length > 0) {
+            let nativeAssetValue = '0';
+
             //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
             const tokensIn = nestedLinearPools.map((item) => item.mainToken);
             const tokensOut = nestedLinearPools.map(
                 (item) => item.poolTokenAddress
             );
             const amounts = tokensIn.map((tokenAddress) => {
-                const token = tokens.find(
-                    (token) =>
+                const token = tokens.find((token) => {
+                    if (token.address === AddressZero) {
+                        nativeAssetValue = parseFixed(token.amount).toString();
+
+                        return (
+                            tokenAddress.toLowerCase() ===
+                            this.config.addresses.tokens.wrappedNativeAsset.toLowerCase()
+                        );
+                    }
+
+                    return (
                         token.address.toLowerCase() ===
                         tokenAddress.toLowerCase()
-                );
+                    );
+                });
 
                 return this.getTokenAmountScaled(
                     tokenAddress,
@@ -447,7 +464,7 @@ export class Relayer {
                 funds,
                 limits: limits.map((l) => l.toString()),
                 deadline: MaxUint256,
-                value: '0', //TODO: this should represent native eth value
+                value: nativeAssetValue,
                 outputReferences: queryResult.assets.map((asset, index) => ({
                     index,
                     key: Relayer.toChainedReference(index),
@@ -459,10 +476,23 @@ export class Relayer {
 
         //if this is a weighted pool, we need to also join the pool
         if (pool.poolType === 'Weighted') {
+            let nativeAssetValue = Zero;
             const amountsIn = pool.tokensList.map((tokenAddress) => {
-                const token = tokens.find(
-                    (token) => token.address === tokenAddress
-                );
+                const token = tokens.find((token) => {
+                    if (token.address === AddressZero) {
+                        nativeAssetValue = parseFixed(token.amount);
+
+                        return (
+                            tokenAddress.toLowerCase() ===
+                            this.config.addresses.tokens.wrappedNativeAsset.toLowerCase()
+                        );
+                    }
+
+                    return (
+                        token.address.toLowerCase() ===
+                        tokenAddress.toLowerCase()
+                    );
+                });
 
                 if (token) {
                     return this.getTokenAmountScaled(
@@ -495,7 +525,7 @@ export class Relayer {
                     ),
                     fromInternalBalance: funds.fromInternalBalance,
                 },
-                value: Zero, //TODO: if we support sending native eth, needs to be handled here
+                value: nativeAssetValue,
                 outputReference: Zero,
             });
 
