@@ -8201,20 +8201,19 @@ class Relayer {
         let batchSwapAssets = [];
         //TODO: if there are no nested pools, we don't need to use the batch relayer
         if (nestedLinearPools.length > 0) {
-            let nativeAssetValue = '0';
+            const nativeToken = tokens.find((token) => token.address === AddressZero);
+            const nativeAssetValue = nativeToken
+                ? parseFixed(nativeToken.amount, 18).toString()
+                : '0';
             //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
             const tokensIn = nestedLinearPools.map((item) => item.mainToken);
             const tokensOut = nestedLinearPools.map((item) => item.poolTokenAddress);
             const amounts = tokensIn.map((tokenAddress) => {
-                const token = tokens.find((token) => {
-                    if (token.address === AddressZero) {
-                        nativeAssetValue = parseFixed(token.amount).toString();
-                        return (tokenAddress.toLowerCase() ===
-                            this.config.addresses.tokens.wrappedNativeAsset.toLowerCase());
-                    }
-                    return (token.address.toLowerCase() ===
-                        tokenAddress.toLowerCase());
-                });
+                if (tokenAddress === AddressZero) {
+                    return nativeAssetValue;
+                }
+                const token = tokens.find((token) => token.address.toLowerCase() ===
+                    tokenAddress.toLowerCase());
                 return this.getTokenAmountScaled(tokenAddress, (token === null || token === void 0 ? void 0 : token.amount) || '0');
             });
             const queryResult = await this.swaps.queryBatchSwapWithSor({
