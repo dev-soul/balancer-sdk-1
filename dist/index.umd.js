@@ -8196,12 +8196,20 @@
             let batchSwapAssets = [];
             //TODO: if there are no nested pools, we don't need to use the batch relayer
             if (nestedLinearPools.length > 0) {
+                let nativeAssetValue = '0';
                 //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
                 const tokensIn = nestedLinearPools.map((item) => item.mainToken);
                 const tokensOut = nestedLinearPools.map((item) => item.poolTokenAddress);
                 const amounts = tokensIn.map((tokenAddress) => {
-                    const token = tokens.find((token) => token.address.toLowerCase() ===
-                        tokenAddress.toLowerCase());
+                    const token = tokens.find((token) => {
+                        if (token.address === constants.AddressZero) {
+                            nativeAssetValue = bignumber.parseFixed(token.amount).toString();
+                            return (tokenAddress.toLowerCase() ===
+                                this.config.addresses.tokens.wrappedNativeAsset.toLowerCase());
+                        }
+                        return (token.address.toLowerCase() ===
+                            tokenAddress.toLowerCase());
+                    });
                     return this.getTokenAmountScaled(tokenAddress, (token === null || token === void 0 ? void 0 : token.amount) || '0');
                 });
                 const queryResult = await this.swaps.queryBatchSwapWithSor({
@@ -8220,7 +8228,7 @@
                     funds,
                     limits: limits.map((l) => l.toString()),
                     deadline: constants.MaxUint256,
-                    value: '0',
+                    value: nativeAssetValue,
                     outputReferences: queryResult.assets.map((asset, index) => ({
                         index,
                         key: Relayer.toChainedReference(index),
@@ -8230,8 +8238,17 @@
             }
             //if this is a weighted pool, we need to also join the pool
             if (pool.poolType === 'Weighted') {
+                let nativeAssetValue = constants.Zero;
                 const amountsIn = pool.tokensList.map((tokenAddress) => {
-                    const token = tokens.find((token) => token.address === tokenAddress);
+                    const token = tokens.find((token) => {
+                        if (token.address === constants.AddressZero) {
+                            nativeAssetValue = bignumber.parseFixed(token.amount);
+                            return (tokenAddress.toLowerCase() ===
+                                this.config.addresses.tokens.wrappedNativeAsset.toLowerCase());
+                        }
+                        return (token.address.toLowerCase() ===
+                            tokenAddress.toLowerCase());
+                    });
                     if (token) {
                         return this.getTokenAmountScaled(tokenAddress, (token === null || token === void 0 ? void 0 : token.amount) || '0');
                     }
@@ -8251,7 +8268,7 @@
                         userData: WeightedPoolEncoder.joinExactTokensInForBPTOut(amountsIn, bptOut),
                         fromInternalBalance: funds.fromInternalBalance,
                     },
-                    value: constants.Zero,
+                    value: nativeAssetValue,
                     outputReference: constants.Zero,
                 });
                 calls.push(encodedJoinPool);
