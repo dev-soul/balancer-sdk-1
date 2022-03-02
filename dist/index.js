@@ -8202,6 +8202,7 @@ class Relayer {
         };
     }
     async joinPool({ poolId, tokens, bptOut, fetchPools, slippage, funds, }) {
+        const wrappedNativeAsset = this.config.addresses.tokens.wrappedNativeAsset.toLowerCase();
         const pool = this.getRequiredPool(poolId);
         const nestedLinearPools = this.getNestedLinearPools(pool);
         const calls = [];
@@ -8213,7 +8214,9 @@ class Relayer {
                 ? bignumber.parseFixed(nativeToken.amount, 18).toString()
                 : '0';
             //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
-            const tokensIn = nestedLinearPools.map((item) => item.mainToken);
+            const tokensIn = nestedLinearPools.map((item) => nativeToken && item.mainToken === wrappedNativeAsset
+                ? constants.AddressZero
+                : item.mainToken);
             const tokensOut = nestedLinearPools.map((item) => item.poolTokenAddress);
             const amounts = tokensIn.map((tokenAddress) => {
                 if (tokenAddress === constants.AddressZero) {
@@ -8249,14 +8252,8 @@ class Relayer {
         }
         //if this is a weighted pool, we need to also join the pool
         if (pool.poolType === 'Weighted') {
-            let nativeAssetValue = constants.Zero;
             const amountsIn = pool.tokensList.map((tokenAddress) => {
                 const token = tokens.find((token) => {
-                    if (token.address === constants.AddressZero) {
-                        nativeAssetValue = bignumber.parseFixed(token.amount);
-                        return (tokenAddress.toLowerCase() ===
-                            this.config.addresses.tokens.wrappedNativeAsset.toLowerCase());
-                    }
                     return (token.address.toLowerCase() ===
                         tokenAddress.toLowerCase());
                 });
@@ -8279,7 +8276,7 @@ class Relayer {
                     userData: WeightedPoolEncoder.joinExactTokensInForBPTOut(amountsIn, bptOut),
                     fromInternalBalance: funds.fromInternalBalance,
                 },
-                value: nativeAssetValue,
+                value: constants.Zero,
                 outputReference: constants.Zero,
             });
             calls.push(encodedJoinPool);
