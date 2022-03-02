@@ -401,6 +401,8 @@ export class Relayer {
         slippage,
         funds,
     }: BatchRelayerJoinPool): Promise<TransactionData> {
+        const wrappedNativeAsset =
+            this.config.addresses.tokens.wrappedNativeAsset.toLowerCase();
         const pool = this.getRequiredPool(poolId);
         const nestedLinearPools = this.getNestedLinearPools(pool);
         const calls: string[] = [];
@@ -416,7 +418,12 @@ export class Relayer {
                 : '0';
 
             //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
-            const tokensIn = nestedLinearPools.map((item) => item.mainToken);
+            const tokensIn = nestedLinearPools.map((item) =>
+                nativeToken && item.mainToken === wrappedNativeAsset
+                    ? AddressZero
+                    : item.mainToken
+            );
+
             const tokensOut = nestedLinearPools.map(
                 (item) => item.poolTokenAddress
             );
@@ -475,18 +482,8 @@ export class Relayer {
 
         //if this is a weighted pool, we need to also join the pool
         if (pool.poolType === 'Weighted') {
-            let nativeAssetValue = Zero;
             const amountsIn = pool.tokensList.map((tokenAddress) => {
                 const token = tokens.find((token) => {
-                    if (token.address === AddressZero) {
-                        nativeAssetValue = parseFixed(token.amount);
-
-                        return (
-                            tokenAddress.toLowerCase() ===
-                            this.config.addresses.tokens.wrappedNativeAsset.toLowerCase()
-                        );
-                    }
-
                     return (
                         token.address.toLowerCase() ===
                         tokenAddress.toLowerCase()
@@ -524,7 +521,7 @@ export class Relayer {
                     ),
                     fromInternalBalance: funds.fromInternalBalance,
                 },
-                value: nativeAssetValue,
+                value: Zero, //TODO: add support for native joins here, ie: FTM/BOOSTED
                 outputReference: Zero,
             });
 
