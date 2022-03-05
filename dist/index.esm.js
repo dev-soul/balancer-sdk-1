@@ -7331,6 +7331,514 @@ class Swaps {
     }
 }
 
+var booMirrorWorldStakingAbi = [
+	{
+		inputs: [
+			{
+				internalType: "contract IERC20",
+				name: "token",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			}
+		],
+		name: "approveVault",
+		outputs: [
+		],
+		stateMutability: "nonpayable",
+		type: "function"
+	},
+	{
+		inputs: [
+			{
+				internalType: "address",
+				name: "sender",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "recipient",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			},
+			{
+				internalType: "uint256",
+				name: "outputReference",
+				type: "uint256"
+			}
+		],
+		name: "booMirrorWorldEnter",
+		outputs: [
+		],
+		stateMutability: "payable",
+		type: "function"
+	},
+	{
+		inputs: [
+			{
+				internalType: "address",
+				name: "sender",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "recipient",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			},
+			{
+				internalType: "uint256",
+				name: "outputReference",
+				type: "uint256"
+			}
+		],
+		name: "booMirrorWorldLeave",
+		outputs: [
+		],
+		stateMutability: "payable",
+		type: "function"
+	},
+	{
+		inputs: [
+		],
+		name: "getVault",
+		outputs: [
+			{
+				internalType: "contract IVault",
+				name: "",
+				type: "address"
+			}
+		],
+		stateMutability: "view",
+		type: "function"
+	}
+];
+
+class BooMirrorWorldStakingService {
+    encodeEnter(params) {
+        const booMirrorWorldStakingLibrary = new Interface(booMirrorWorldStakingAbi);
+        return booMirrorWorldStakingLibrary.encodeFunctionData('booMirrorWorldEnter', [
+            params.sender,
+            params.recipient,
+            params.amount,
+            params.outputReference,
+        ]);
+    }
+    encodeLeave(params) {
+        const booMirrorWorldStakingLibrary = new Interface(booMirrorWorldStakingAbi);
+        return booMirrorWorldStakingLibrary.encodeFunctionData('booMirrorWorldLeave', [
+            params.sender,
+            params.recipient,
+            params.amount,
+            params.outputReference,
+        ]);
+    }
+}
+
+var fBeetsBarStakingAbi = [
+	{
+		inputs: [
+			{
+				internalType: "contract IERC20",
+				name: "token",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			}
+		],
+		name: "approveVault",
+		outputs: [
+		],
+		stateMutability: "nonpayable",
+		type: "function"
+	},
+	{
+		inputs: [
+			{
+				internalType: "address",
+				name: "sender",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "recipient",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			},
+			{
+				internalType: "uint256",
+				name: "outputReference",
+				type: "uint256"
+			}
+		],
+		name: "fBeetsBarEnter",
+		outputs: [
+		],
+		stateMutability: "payable",
+		type: "function"
+	},
+	{
+		inputs: [
+			{
+				internalType: "address",
+				name: "sender",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "recipient",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			},
+			{
+				internalType: "uint256",
+				name: "outputReference",
+				type: "uint256"
+			}
+		],
+		name: "fBeetsBarLeave",
+		outputs: [
+		],
+		stateMutability: "payable",
+		type: "function"
+	},
+	{
+		inputs: [
+		],
+		name: "getVault",
+		outputs: [
+			{
+				internalType: "contract IVault",
+				name: "",
+				type: "address"
+			}
+		],
+		stateMutability: "view",
+		type: "function"
+	}
+];
+
+class FBeetsBarStakingService {
+    encodeEnter(params) {
+        const fBeetsBarStakingLibrary = new Interface(fBeetsBarStakingAbi);
+        return fBeetsBarStakingLibrary.encodeFunctionData('fBeetsBarEnter', [
+            params.sender,
+            params.recipient,
+            params.amount,
+            params.outputReference,
+        ]);
+    }
+    encodeLeave(params) {
+        const fBeetsBarStakingLibrary = new Interface(fBeetsBarStakingAbi);
+        return fBeetsBarStakingLibrary.encodeFunctionData('fBeetsBarLeave', [
+            params.sender,
+            params.recipient,
+            params.amount,
+            params.outputReference,
+        ]);
+    }
+}
+
+class MasterChefStakingService {
+    encodeDeposit(params) {
+        const fBeetsBarStakingLibrary = new Interface(fBeetsBarStakingAbi);
+        return fBeetsBarStakingLibrary.encodeFunctionData('masterChefDeposit', [
+            params.sender,
+            params.recipient,
+            params.token,
+            params.pid,
+            params.amount,
+            params.outputReference,
+        ]);
+    }
+    encodeWithdraw(params) {
+        const fBeetsBarStakingLibrary = new Interface(fBeetsBarStakingAbi);
+        return fBeetsBarStakingLibrary.encodeFunctionData('masterChefWithdraw', [
+            params.recipient,
+            params.pid,
+            params.amount,
+            params.outputReference,
+        ]);
+    }
+}
+
+var yearnWrappingAbi = [
+	{
+		inputs: [
+			{
+				internalType: "contract IERC20",
+				name: "token",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			}
+		],
+		name: "approveVault",
+		outputs: [
+		],
+		stateMutability: "nonpayable",
+		type: "function"
+	},
+	{
+		inputs: [
+		],
+		name: "getVault",
+		outputs: [
+			{
+				internalType: "contract IVault",
+				name: "",
+				type: "address"
+			}
+		],
+		stateMutability: "view",
+		type: "function"
+	},
+	{
+		inputs: [
+			{
+				internalType: "contract IYearnTokenVault",
+				name: "vaultToken",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "sender",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "recipient",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			},
+			{
+				internalType: "uint256",
+				name: "outputReference",
+				type: "uint256"
+			}
+		],
+		name: "unwrapYearnVaultToken",
+		outputs: [
+		],
+		stateMutability: "payable",
+		type: "function"
+	},
+	{
+		inputs: [
+			{
+				internalType: "contract IYearnTokenVault",
+				name: "vaultToken",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "sender",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "recipient",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			},
+			{
+				internalType: "uint256",
+				name: "outputReference",
+				type: "uint256"
+			}
+		],
+		name: "wrapYearnVaultToken",
+		outputs: [
+		],
+		stateMutability: "payable",
+		type: "function"
+	}
+];
+
+class YearnWrappingService {
+    encodeWrap(params) {
+        const yearnWrappingLibrary = new Interface(yearnWrappingAbi);
+        return yearnWrappingLibrary.encodeFunctionData('wrapYearnVaultToken', [
+            params.vaultToken,
+            params.sender,
+            params.recipient,
+            params.amount,
+            params.outputReference,
+        ]);
+    }
+    encodeUnwrap(params) {
+        const yearnWrappingLibrary = new Interface(yearnWrappingAbi);
+        return yearnWrappingLibrary.encodeFunctionData('unwrapYearnVaultToken', [
+            params.vaultToken,
+            params.sender,
+            params.recipient,
+            params.amount,
+            params.outputReference,
+        ]);
+    }
+}
+
+var aaveWrappingAbi = [
+	{
+		inputs: [
+			{
+				internalType: "contract IERC20",
+				name: "token",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			}
+		],
+		name: "approveVault",
+		outputs: [
+		],
+		stateMutability: "nonpayable",
+		type: "function"
+	},
+	{
+		inputs: [
+		],
+		name: "getVault",
+		outputs: [
+			{
+				internalType: "contract IVault",
+				name: "",
+				type: "address"
+			}
+		],
+		stateMutability: "view",
+		type: "function"
+	},
+	{
+		inputs: [
+			{
+				internalType: "contract IStaticATokenLM",
+				name: "staticToken",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "sender",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "recipient",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			},
+			{
+				internalType: "bool",
+				name: "toUnderlying",
+				type: "bool"
+			},
+			{
+				internalType: "uint256",
+				name: "outputReference",
+				type: "uint256"
+			}
+		],
+		name: "unwrapAaveStaticToken",
+		outputs: [
+		],
+		stateMutability: "payable",
+		type: "function"
+	},
+	{
+		inputs: [
+			{
+				internalType: "contract IStaticATokenLM",
+				name: "staticToken",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "sender",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "recipient",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			},
+			{
+				internalType: "bool",
+				name: "fromUnderlying",
+				type: "bool"
+			},
+			{
+				internalType: "uint256",
+				name: "outputReference",
+				type: "uint256"
+			}
+		],
+		name: "wrapAaveDynamicToken",
+		outputs: [
+		],
+		stateMutability: "payable",
+		type: "function"
+	}
+];
+
+class AaveWrappingService {
+    encodeUnwrap(params) {
+        const aaveWrappingLibrary = new Interface(aaveWrappingAbi);
+        return aaveWrappingLibrary.encodeFunctionData('unwrapAaveStaticToken', [
+            params.staticToken,
+            params.sender,
+            params.recipient,
+            params.amount,
+            params.toUnderlying,
+            params.outputReferences,
+        ]);
+    }
+}
+
 var relayerLibraryAbi = [
 	{
 		inputs: [
@@ -7765,196 +8273,8 @@ var relayerLibraryAbi = [
 	}
 ];
 
-var aaveWrappingAbi = [
-	{
-		inputs: [
-			{
-				internalType: "contract IERC20",
-				name: "token",
-				type: "address"
-			},
-			{
-				internalType: "uint256",
-				name: "amount",
-				type: "uint256"
-			}
-		],
-		name: "approveVault",
-		outputs: [
-		],
-		stateMutability: "nonpayable",
-		type: "function"
-	},
-	{
-		inputs: [
-		],
-		name: "getVault",
-		outputs: [
-			{
-				internalType: "contract IVault",
-				name: "",
-				type: "address"
-			}
-		],
-		stateMutability: "view",
-		type: "function"
-	},
-	{
-		inputs: [
-			{
-				internalType: "contract IStaticATokenLM",
-				name: "staticToken",
-				type: "address"
-			},
-			{
-				internalType: "address",
-				name: "sender",
-				type: "address"
-			},
-			{
-				internalType: "address",
-				name: "recipient",
-				type: "address"
-			},
-			{
-				internalType: "uint256",
-				name: "amount",
-				type: "uint256"
-			},
-			{
-				internalType: "bool",
-				name: "toUnderlying",
-				type: "bool"
-			},
-			{
-				internalType: "uint256",
-				name: "outputReference",
-				type: "uint256"
-			}
-		],
-		name: "unwrapAaveStaticToken",
-		outputs: [
-		],
-		stateMutability: "payable",
-		type: "function"
-	},
-	{
-		inputs: [
-			{
-				internalType: "contract IStaticATokenLM",
-				name: "staticToken",
-				type: "address"
-			},
-			{
-				internalType: "address",
-				name: "sender",
-				type: "address"
-			},
-			{
-				internalType: "address",
-				name: "recipient",
-				type: "address"
-			},
-			{
-				internalType: "uint256",
-				name: "amount",
-				type: "uint256"
-			},
-			{
-				internalType: "bool",
-				name: "fromUnderlying",
-				type: "bool"
-			},
-			{
-				internalType: "uint256",
-				name: "outputReference",
-				type: "uint256"
-			}
-		],
-		name: "wrapAaveDynamicToken",
-		outputs: [
-		],
-		stateMutability: "payable",
-		type: "function"
-	}
-];
-
-var yearnWrappingAbi = [
-	{
-		inputs: [
-			{
-				internalType: "contract IERC20",
-				name: "token",
-				type: "address"
-			},
-			{
-				internalType: "uint256",
-				name: "amount",
-				type: "uint256"
-			}
-		],
-		name: "approveVault",
-		outputs: [
-		],
-		stateMutability: "nonpayable",
-		type: "function"
-	},
-	{
-		inputs: [
-		],
-		name: "getVault",
-		outputs: [
-			{
-				internalType: "contract IVault",
-				name: "",
-				type: "address"
-			}
-		],
-		stateMutability: "view",
-		type: "function"
-	},
-	{
-		inputs: [
-			{
-				internalType: "contract IYearnTokenVault",
-				name: "vaultToken",
-				type: "address"
-			},
-			{
-				internalType: "address",
-				name: "sender",
-				type: "address"
-			},
-			{
-				internalType: "address",
-				name: "recipient",
-				type: "address"
-			},
-			{
-				internalType: "uint256",
-				name: "amount",
-				type: "uint256"
-			},
-			{
-				internalType: "uint256",
-				name: "outputReference",
-				type: "uint256"
-			}
-		],
-		name: "unwrapYearnVaultToken",
-		outputs: [
-		],
-		stateMutability: "payable",
-		type: "function"
-	}
-];
-
-class Relayer {
-    constructor(swaps, config) {
-        this.swaps = swaps;
-        this.config = config;
-    }
-    static encodeBatchSwap(params) {
+class VaultActionsService {
+    encodeBatchSwap(params) {
         const relayerLibrary = new Interface(relayerLibraryAbi);
         return relayerLibrary.encodeFunctionData('batchSwap', [
             params.swapType,
@@ -7967,7 +8287,7 @@ class Relayer {
             params.outputReferences,
         ]);
     }
-    static encodeExitPool(params) {
+    encodeExitPool(params) {
         const relayerLibrary = new Interface(relayerLibraryAbi);
         return relayerLibrary.encodeFunctionData('exitPool', [
             params.poolId,
@@ -7978,7 +8298,7 @@ class Relayer {
             params.outputReferences,
         ]);
     }
-    static encodeJoinPool(params) {
+    encodeJoinPool(params) {
         const relayerLibrary = new Interface(relayerLibraryAbi);
         return relayerLibrary.encodeFunctionData('joinPool', [
             params.poolId,
@@ -7990,33 +8310,7 @@ class Relayer {
             params.outputReference,
         ]);
     }
-    static encodeUnwrapAaveStaticToken(params) {
-        const aaveWrappingLibrary = new Interface(aaveWrappingAbi);
-        return aaveWrappingLibrary.encodeFunctionData('unwrapAaveStaticToken', [
-            params.staticToken,
-            params.sender,
-            params.recipient,
-            params.amount,
-            params.toUnderlying,
-            params.outputReferences,
-        ]);
-    }
-    static encodeUnwrapYearnVaultToken(params) {
-        const yearnWrappingLibrary = new Interface(yearnWrappingAbi);
-        return yearnWrappingLibrary.encodeFunctionData('unwrapYearnVaultToken', [
-            params.vaultToken,
-            params.sender,
-            params.recipient,
-            params.amount,
-            params.outputReference,
-        ]);
-    }
-    static toChainedReference(key) {
-        // The full padded prefix is 66 characters long, with 64 hex characters and the 0x prefix.
-        const paddedPrefix = `0x${Relayer.CHAINED_REFERENCE_PREFIX}${'0'.repeat(64 - Relayer.CHAINED_REFERENCE_PREFIX.length)}`;
-        return BigNumber.from(paddedPrefix).add(key);
-    }
-    static constructExitCall(params) {
+    constructExitCall(params) {
         const { assets, minAmountsOut, userData, toInternalBalance, poolId, poolKind, sender, recipient, outputReferences, } = params;
         const exitPoolRequest = {
             assets,
@@ -8032,8 +8326,25 @@ class Relayer {
             outputReferences,
             exitPoolRequest,
         };
-        const exitEncoded = Relayer.encodeExitPool(exitPoolInput);
-        return exitEncoded;
+        return this.encodeExitPool(exitPoolInput);
+    }
+}
+
+class Relayer {
+    constructor(swaps, config) {
+        this.swaps = swaps;
+        this.config = config;
+        this.vaultActionsService = new VaultActionsService();
+        this.aaveWrappingService = new AaveWrappingService();
+        this.booMirrorWorldStaking = new BooMirrorWorldStakingService();
+        this.fBeetsBarStakingService = new FBeetsBarStakingService();
+        this.masterChefStakingService = new MasterChefStakingService();
+        this.yearnWrappingService = new YearnWrappingService();
+    }
+    static toChainedReference(key) {
+        // The full padded prefix is 66 characters long, with 64 hex characters and the 0x prefix.
+        const paddedPrefix = `0x${Relayer.CHAINED_REFERENCE_PREFIX}${'0'.repeat(64 - Relayer.CHAINED_REFERENCE_PREFIX.length)}`;
+        return BigNumber.from(paddedPrefix).add(key);
     }
     /**
      * fetchPools saves updated pools data to SOR internal onChainBalanceCache.
@@ -8092,7 +8403,7 @@ class Relayer {
             index,
             key: Relayer.toChainedReference(index),
         }));
-        const exitCall = Relayer.constructExitCall({
+        const exitCall = this.vaultActionsService.constructExitCall({
             assets: params.exitTokens,
             minAmountsOut,
             userData: params.userData,
@@ -8169,7 +8480,7 @@ class Relayer {
                 return returnAmount;
             });
         }
-        const encodedBatchSwap = Relayer.encodeBatchSwap({
+        const encodedBatchSwap = this.vaultActionsService.encodeBatchSwap({
             swapType: SwapType.SwapExactIn,
             swaps: queryResult.swaps,
             assets: queryResult.assets,
@@ -8194,7 +8505,8 @@ class Relayer {
             },
         };
     }
-    async joinPool({ poolId, tokens, bptOut, fetchPools, slippage, funds, }) {
+    async joinPool({ poolId, tokens, bptOut, fetchPools, slippage, funds, farmId, }) {
+        const stakeBptInFarm = typeof farmId === 'number';
         const wrappedNativeAsset = this.config.addresses.tokens.wrappedNativeAsset.toLowerCase();
         const pool = this.getRequiredPool(poolId);
         const nestedLinearPools = this.getNestedLinearPools(pool);
@@ -8228,7 +8540,7 @@ class Relayer {
             });
             batchSwapAssets = queryResult.assets;
             const limits = Swaps.getLimitsForSlippage(tokensIn, tokensOut, SwapType.SwapExactIn, queryResult.deltas, queryResult.assets, slippage);
-            const encodedBatchSwap = Relayer.encodeBatchSwap({
+            const encodedBatchSwap = this.vaultActionsService.encodeBatchSwap({
                 swapType: SwapType.SwapExactIn,
                 swaps: queryResult.swaps,
                 assets: queryResult.assets,
@@ -8258,7 +8570,7 @@ class Relayer {
                 const index = batchSwapAssets.findIndex((asset) => asset.toLowerCase() === tokenAddress.toLowerCase());
                 return Relayer.toChainedReference(index);
             });
-            const encodedJoinPool = Relayer.encodeJoinPool({
+            const encodedJoinPool = this.vaultActionsService.encodeJoinPool({
                 poolId: pool.id,
                 poolKind: 0,
                 sender: funds.sender,
@@ -8270,9 +8582,21 @@ class Relayer {
                     fromInternalBalance: funds.fromInternalBalance,
                 },
                 value: Zero,
-                outputReference: Zero,
+                outputReference: stakeBptInFarm
+                    ? Relayer.toChainedReference(0)
+                    : Zero,
             });
             calls.push(encodedJoinPool);
+        }
+        if (stakeBptInFarm) {
+            this.masterChefStakingService.encodeDeposit({
+                sender: funds.sender,
+                recipient: funds.recipient,
+                token: pool.address,
+                pid: farmId,
+                amount: Relayer.toChainedReference(0),
+                outputReference: Zero,
+            });
         }
         return {
             function: 'multicall',
@@ -8439,7 +8763,7 @@ class Relayer {
         // Output of swaps (wrappedTokens) is used as input to unwrap
         // Need indices of output tokens and outputReferences need to be made with those as key
         const { unwrapCalls, outputReferences } = this.encodeUnwrapCalls(wrappedTokens, assets, funds);
-        const encodedBatchSwap = Relayer.encodeBatchSwap({
+        const encodedBatchSwap = this.vaultActionsService.encodeBatchSwap({
             swapType: swapType,
             swaps: swaps,
             assets: assets,
@@ -8470,7 +8794,7 @@ class Relayer {
             // console.log(`Unwrapping ${wrappedToken} with amt: ${key.toHexString()}`);
             switch (linearPoolType) {
                 case 'aave':
-                    unwrapCalls.push(Relayer.encodeUnwrapAaveStaticToken({
+                    unwrapCalls.push(this.aaveWrappingService.encodeUnwrap({
                         staticToken: wrappedToken,
                         sender: funds.recipient,
                         recipient: funds.sender,
@@ -8480,8 +8804,16 @@ class Relayer {
                     }));
                     break;
                 case 'yearn':
-                    unwrapCalls.push(Relayer.encodeUnwrapYearnVaultToken({
+                    unwrapCalls.push(this.yearnWrappingService.encodeUnwrap({
                         vaultToken: wrappedToken,
+                        sender: funds.recipient,
+                        recipient: funds.sender,
+                        amount: key,
+                        outputReference: 0,
+                    }));
+                    break;
+                case 'boo':
+                    unwrapCalls.push(this.booMirrorWorldStaking.encodeLeave({
                         sender: funds.recipient,
                         recipient: funds.sender,
                         amount: key,
