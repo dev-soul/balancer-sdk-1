@@ -33,11 +33,6 @@
     {
         "inputs": [
             {
-                "internalType": "contract IYearnTokenVault",
-                "name": "vaultToken",
-                "type": "address"
-            },
-            {
                 "internalType": "address",
                 "name": "sender",
                 "type": "address"
@@ -46,6 +41,16 @@
                 "internalType": "address",
                 "name": "recipient",
                 "type": "address"
+            },
+            {
+                "internalType": "contract IERC20",
+                "name": "token",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "pid",
+                "type": "uint256"
             },
             {
                 "internalType": "uint256",
@@ -58,7 +63,7 @@
                 "type": "uint256"
             }
         ],
-        "name": "unwrapYearnVaultToken",
+        "name": "masterChefDeposit",
         "outputs": [],
         "stateMutability": "payable",
         "type": "function"
@@ -66,19 +71,14 @@
     {
         "inputs": [
             {
-                "internalType": "contract IYearnTokenVault",
-                "name": "vaultToken",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            },
-            {
                 "internalType": "address",
                 "name": "recipient",
                 "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "pid",
+                "type": "uint256"
             },
             {
                 "internalType": "uint256",
@@ -91,7 +91,7 @@
                 "type": "uint256"
             }
         ],
-        "name": "wrapYearnVaultToken",
+        "name": "masterChefWithdraw",
         "outputs": [],
         "stateMutability": "payable",
         "type": "function"

@@ -1,5 +1,4 @@
 import { BigNumber, BigNumberish, parseFixed } from '@ethersproject/bignumber';
-import { Interface } from '@ethersproject/abi';
 import {
     AddressZero,
     MaxUint256,
@@ -10,13 +9,7 @@ import {
 import { Swaps } from '@/modules/swaps/swaps.module';
 import {
     BatchRelayerJoinPool,
-    EncodeBatchSwapInput,
-    EncodeExitPoolInput,
-    EncodeJoinPoolInput,
-    EncodeUnwrapAaveStaticTokenInput,
-    EncodeUnwrapYearnVaultTokenInput,
     ExitAndBatchSwapInput,
-    ExitPoolData,
     NestedLinearPool,
     OutputReference,
 } from './types';
@@ -33,95 +26,36 @@ import {
     SwapType,
 } from '../swaps/types';
 import { SubgraphPoolBase } from '@balancer-labs/sor';
-
-import relayerLibraryAbi from '@/lib/abi/VaultActions.json';
-import aaveWrappingAbi from '@/lib/abi/AaveWrapping.json';
-import yearnWrappingAbi from '@/lib/abi/YearnWrapping.json';
-import { flatten, keyBy, sortBy } from 'lodash';
+import { flatten, keyBy } from 'lodash';
 import { WeightedPoolEncoder } from '@/pool-weighted/encoder';
+import { BooMirrorWorldStakingService } from '@/modules/relayer/extensions/boo-mirror-world-staking.service';
+import { FBeetsBarStakingService } from '@/modules/relayer/extensions/fbeets-bar-staking.service';
+import { MasterChefStakingService } from '@/modules/relayer/extensions/masterchef-staking.service';
+import { YearnWrappingService } from '@/modules/relayer/extensions/yearn-wrapping.service';
+import { AaveWrappingService } from '@/modules/relayer/extensions/aave-wrapping.service';
+import { VaultActionsService } from '@/modules/relayer/extensions/vault-actions.service';
 
 export * from './types';
 
 export class Relayer {
     static CHAINED_REFERENCE_PREFIX = 'ba10';
+    private vaultActionsService: VaultActionsService;
+    private aaveWrappingService: AaveWrappingService;
+    private booMirrorWorldStaking: BooMirrorWorldStakingService;
+    private fBeetsBarStakingService: FBeetsBarStakingService;
+    private masterChefStakingService: MasterChefStakingService;
+    private yearnWrappingService: YearnWrappingService;
 
     constructor(
         private readonly swaps: Swaps,
         private readonly config: BalancerNetworkConfig
-    ) {}
-
-    static encodeBatchSwap(params: EncodeBatchSwapInput): string {
-        const relayerLibrary = new Interface(relayerLibraryAbi);
-
-        return relayerLibrary.encodeFunctionData('batchSwap', [
-            params.swapType,
-            params.swaps,
-            params.assets,
-            params.funds,
-            params.limits,
-            params.deadline,
-            params.value,
-            params.outputReferences,
-        ]);
-    }
-
-    static encodeExitPool(params: EncodeExitPoolInput): string {
-        const relayerLibrary = new Interface(relayerLibraryAbi);
-
-        return relayerLibrary.encodeFunctionData('exitPool', [
-            params.poolId,
-            params.poolKind,
-            params.sender,
-            params.recipient,
-            params.exitPoolRequest,
-            params.outputReferences,
-        ]);
-    }
-
-    static encodeJoinPool(params: EncodeJoinPoolInput): string {
-        const relayerLibrary = new Interface(relayerLibraryAbi);
-
-        return relayerLibrary.encodeFunctionData('joinPool', [
-            params.poolId,
-            params.poolKind,
-            params.sender,
-            params.recipient,
-            params.joinPoolRequest,
-            params.value,
-            params.outputReference,
-        ]);
-    }
-
-    static encodeUnwrapAaveStaticToken(
-        params: EncodeUnwrapAaveStaticTokenInput
-    ): string {
-        const aaveWrappingLibrary = new Interface(aaveWrappingAbi);
-
-        return aaveWrappingLibrary.encodeFunctionData('unwrapAaveStaticToken', [
-            params.staticToken,
-            params.sender,
-            params.recipient,
-            params.amount,
-            params.toUnderlying,
-            params.outputReferences,
-        ]);
-    }
-
-    static encodeUnwrapYearnVaultToken(
-        params: EncodeUnwrapYearnVaultTokenInput
-    ): string {
-        const yearnWrappingLibrary = new Interface(yearnWrappingAbi);
-
-        return yearnWrappingLibrary.encodeFunctionData(
-            'unwrapYearnVaultToken',
-            [
-                params.vaultToken,
-                params.sender,
-                params.recipient,
-                params.amount,
-                params.outputReference,
-            ]
-        );
+    ) {
+        this.vaultActionsService = new VaultActionsService();
+        this.aaveWrappingService = new AaveWrappingService();
+        this.booMirrorWorldStaking = new BooMirrorWorldStakingService();
+        this.fBeetsBarStakingService = new FBeetsBarStakingService();
+        this.masterChefStakingService = new MasterChefStakingService();
+        this.yearnWrappingService = new YearnWrappingService();
     }
 
     static toChainedReference(key: BigNumberish): BigNumber {
@@ -130,39 +64,6 @@ export class Relayer {
             64 - Relayer.CHAINED_REFERENCE_PREFIX.length
         )}`;
         return BigNumber.from(paddedPrefix).add(key);
-    }
-
-    static constructExitCall(params: ExitPoolData): string {
-        const {
-            assets,
-            minAmountsOut,
-            userData,
-            toInternalBalance,
-            poolId,
-            poolKind,
-            sender,
-            recipient,
-            outputReferences,
-        } = params;
-
-        const exitPoolRequest: ExitPoolRequest = {
-            assets,
-            minAmountsOut,
-            userData,
-            toInternalBalance,
-        };
-
-        const exitPoolInput: EncodeExitPoolInput = {
-            poolId,
-            poolKind,
-            sender,
-            recipient,
-            outputReferences,
-            exitPoolRequest,
-        };
-
-        const exitEncoded = Relayer.encodeExitPool(exitPoolInput);
-        return exitEncoded;
     }
 
     /**
@@ -253,7 +154,7 @@ export class Relayer {
             key: Relayer.toChainedReference(index),
         }));
 
-        const exitCall = Relayer.constructExitCall({
+        const exitCall = this.vaultActionsService.constructExitCall({
             assets: params.exitTokens,
             minAmountsOut,
             userData: params.userData,
@@ -364,7 +265,7 @@ export class Relayer {
             );
         }
 
-        const encodedBatchSwap = Relayer.encodeBatchSwap({
+        const encodedBatchSwap = this.vaultActionsService.encodeBatchSwap({
             swapType: SwapType.SwapExactIn,
             swaps: queryResult.swaps,
             assets: queryResult.assets,
@@ -400,7 +301,9 @@ export class Relayer {
         fetchPools,
         slippage,
         funds,
+        farmId,
     }: BatchRelayerJoinPool): Promise<TransactionData> {
+        const stakeBptInFarm = typeof farmId === 'number';
         const wrappedNativeAsset =
             this.config.addresses.tokens.wrappedNativeAsset.toLowerCase();
         const pool = this.getRequiredPool(poolId);
@@ -463,7 +366,7 @@ export class Relayer {
                 slippage
             );
 
-            const encodedBatchSwap = Relayer.encodeBatchSwap({
+            const encodedBatchSwap = this.vaultActionsService.encodeBatchSwap({
                 swapType: SwapType.SwapExactIn,
                 swaps: queryResult.swaps,
                 assets: queryResult.assets,
@@ -507,7 +410,7 @@ export class Relayer {
                 return Relayer.toChainedReference(index);
             });
 
-            const encodedJoinPool = Relayer.encodeJoinPool({
+            const encodedJoinPool = this.vaultActionsService.encodeJoinPool({
                 poolId: pool.id,
                 poolKind: 0,
                 sender: funds.sender,
@@ -522,10 +425,23 @@ export class Relayer {
                     fromInternalBalance: funds.fromInternalBalance,
                 },
                 value: Zero, //TODO: add support for native joins here, ie: FTM/BOOSTED
-                outputReference: Zero,
+                outputReference: stakeBptInFarm
+                    ? Relayer.toChainedReference(0)
+                    : Zero,
             });
 
             calls.push(encodedJoinPool);
+        }
+
+        if (stakeBptInFarm) {
+            this.masterChefStakingService.encodeDeposit({
+                sender: funds.sender,
+                recipient: funds.recipient,
+                token: pool.address,
+                pid: farmId,
+                amount: Relayer.toChainedReference(0),
+                outputReference: Zero,
+            });
         }
 
         return {
@@ -795,7 +711,7 @@ export class Relayer {
             funds
         );
 
-        const encodedBatchSwap = Relayer.encodeBatchSwap({
+        const encodedBatchSwap = this.vaultActionsService.encodeBatchSwap({
             swapType: swapType,
             swaps: swaps,
             assets: assets,
@@ -841,7 +757,7 @@ export class Relayer {
             switch (linearPoolType) {
                 case 'aave':
                     unwrapCalls.push(
-                        Relayer.encodeUnwrapAaveStaticToken({
+                        this.aaveWrappingService.encodeUnwrap({
                             staticToken: wrappedToken,
                             sender: funds.recipient, // This should be relayer
                             recipient: funds.sender, // This will be caller
@@ -853,8 +769,18 @@ export class Relayer {
                     break;
                 case 'yearn':
                     unwrapCalls.push(
-                        Relayer.encodeUnwrapYearnVaultToken({
+                        this.yearnWrappingService.encodeUnwrap({
                             vaultToken: wrappedToken,
+                            sender: funds.recipient, // This should be relayer
+                            recipient: funds.sender, // This will be caller
+                            amount: key, // Use output of swap as input for unwrap
+                            outputReference: 0,
+                        })
+                    );
+                    break;
+                case 'boo':
+                    unwrapCalls.push(
+                        this.booMirrorWorldStaking.encodeLeave({
                             sender: funds.recipient, // This should be relayer
                             recipient: funds.sender, // This will be caller
                             amount: key, // Use output of swap as input for unwrap

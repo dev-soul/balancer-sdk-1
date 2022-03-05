@@ -92,4 +92,49 @@ export interface BatchRelayerJoinPool {
     slippage: string;
     funds: FundManagement;
     fetchPools: FetchPoolsInput;
+    farmId?: number;
+}
+
+export interface EncodeBooMirrorWorldEnterInput {
+    sender: string;
+    recipient: string;
+    amount: BigNumberish;
+    outputReference: BigNumberish;
+}
+
+export interface EncodeBooMirrorWorldLeaveInput {
+    sender: string;
+    recipient: string;
+    amount: BigNumberish;
+    outputReference: BigNumberish;
+}
+
+export interface EncodeFBeetsBarEnterInput {
+    sender: string;
+    recipient: string;
+    amount: BigNumberish;
+    outputReference: BigNumberish;
+}
+
+export interface EncodeFBeetsBarLeaveInput {
+    sender: string;
+    recipient: string;
+    amount: BigNumberish;
+    outputReference: BigNumberish;
+}
+
+export interface EncodeMasterChefDepositInput {
+    sender: string;
+    recipient: string;
+    token: string;
+    pid: number;
+    amount: BigNumberish;
+    outputReference: BigNumberish;
+}
+
+export interface EncodeMasterChefWithdrawInput {
+    recipient: string;
+    pid: number;
+    amount: BigNumberish;
+    outputReference: BigNumberish;
 }
