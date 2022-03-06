@@ -8518,7 +8518,7 @@ class Relayer {
         const pool = this.getRequiredPool(poolId);
         const nestedLinearPools = this.getNestedLinearPools(pool);
         const calls = [];
-        let batchSwapAssets = [];
+        let queryResult = null;
         //TODO: if there are no nested pools, we don't need to use the batch relayer
         if (nestedLinearPools.length > 0) {
             const nativeToken = tokens.find((token) => token.address === constants.AddressZero);
@@ -8538,14 +8538,13 @@ class Relayer {
                     tokenAddress.toLowerCase());
                 return this.getTokenAmountScaled(tokenAddress, (token === null || token === void 0 ? void 0 : token.amount) || '0');
             });
-            const queryResult = await this.swaps.queryBatchSwapWithSor({
+            queryResult = await this.swaps.queryBatchSwapWithSor({
                 tokensIn,
                 tokensOut,
                 swapType: exports.SwapType.SwapExactIn,
                 amounts,
                 fetchPools,
             });
-            batchSwapAssets = queryResult.assets;
             const limits = Swaps.getLimitsForSlippage(tokensIn, tokensOut, exports.SwapType.SwapExactIn, queryResult.deltas, queryResult.assets, slippage);
             const encodedBatchSwap = this.vaultActionsService.encodeBatchSwap({
                 swapType: exports.SwapType.SwapExactIn,
@@ -8574,8 +8573,12 @@ class Relayer {
                 }
                 //This token is a nested BPT, not a mainToken
                 //Replace the amount with the chained reference value
-                const index = batchSwapAssets.findIndex((asset) => asset.toLowerCase() === tokenAddress.toLowerCase());
-                return Relayer.toChainedReference(index);
+                const index = (queryResult === null || queryResult === void 0 ? void 0 : queryResult.assets.findIndex((asset) => asset.toLowerCase() === tokenAddress.toLowerCase())) || -1;
+                //if the return amount is 0, we dont pass on the chained reference
+                if (index === -1 || (queryResult === null || queryResult === void 0 ? void 0 : queryResult.returnAmounts[index]) === '0') {
+                    return '0';
+                }
+                return Relayer.toChainedReference(index || 0);
             });
             const encodedJoinPool = this.vaultActionsService.encodeJoinPool({
                 poolId: pool.id,
