@@ -7568,9 +7568,113 @@ class FBeetsBarStakingService {
     }
 }
 
+var masterChefStakingAbi = [
+	{
+		inputs: [
+			{
+				internalType: "contract IERC20",
+				name: "token",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			}
+		],
+		name: "approveVault",
+		outputs: [
+		],
+		stateMutability: "nonpayable",
+		type: "function"
+	},
+	{
+		inputs: [
+		],
+		name: "getVault",
+		outputs: [
+			{
+				internalType: "contract IVault",
+				name: "",
+				type: "address"
+			}
+		],
+		stateMutability: "view",
+		type: "function"
+	},
+	{
+		inputs: [
+			{
+				internalType: "address",
+				name: "sender",
+				type: "address"
+			},
+			{
+				internalType: "address",
+				name: "recipient",
+				type: "address"
+			},
+			{
+				internalType: "contract IERC20",
+				name: "token",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "pid",
+				type: "uint256"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			},
+			{
+				internalType: "uint256",
+				name: "outputReference",
+				type: "uint256"
+			}
+		],
+		name: "masterChefDeposit",
+		outputs: [
+		],
+		stateMutability: "payable",
+		type: "function"
+	},
+	{
+		inputs: [
+			{
+				internalType: "address",
+				name: "recipient",
+				type: "address"
+			},
+			{
+				internalType: "uint256",
+				name: "pid",
+				type: "uint256"
+			},
+			{
+				internalType: "uint256",
+				name: "amount",
+				type: "uint256"
+			},
+			{
+				internalType: "uint256",
+				name: "outputReference",
+				type: "uint256"
+			}
+		],
+		name: "masterChefWithdraw",
+		outputs: [
+		],
+		stateMutability: "payable",
+		type: "function"
+	}
+];
+
 class MasterChefStakingService {
     encodeDeposit(params) {
-        const fBeetsBarStakingLibrary = new abi.Interface(fBeetsBarStakingAbi);
+        const fBeetsBarStakingLibrary = new abi.Interface(masterChefStakingAbi);
         return fBeetsBarStakingLibrary.encodeFunctionData('masterChefDeposit', [
             params.sender,
             params.recipient,
@@ -7581,7 +7685,7 @@ class MasterChefStakingService {
         ]);
     }
     encodeWithdraw(params) {
-        const fBeetsBarStakingLibrary = new abi.Interface(fBeetsBarStakingAbi);
+        const fBeetsBarStakingLibrary = new abi.Interface(masterChefStakingAbi);
         return fBeetsBarStakingLibrary.encodeFunctionData('masterChefWithdraw', [
             params.recipient,
             params.pid,
@@ -8519,12 +8623,12 @@ class Relayer {
         const nestedLinearPools = this.getNestedLinearPools(pool);
         const calls = [];
         let queryResult = null;
+        const nativeToken = tokens.find((token) => token.address === constants.AddressZero);
+        const nativeAssetValue = nativeToken
+            ? bignumber.parseFixed(nativeToken.amount, 18).toString()
+            : '0';
         //TODO: if there are no nested pools, we don't need to use the batch relayer
         if (nestedLinearPools.length > 0) {
-            const nativeToken = tokens.find((token) => token.address === constants.AddressZero);
-            const nativeAssetValue = nativeToken
-                ? bignumber.parseFixed(nativeToken.amount, 18).toString()
-                : '0';
             //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
             const tokensIn = nestedLinearPools.map((item) => nativeToken && item.mainToken === wrappedNativeAsset
                 ? constants.AddressZero
@@ -8591,7 +8695,10 @@ class Relayer {
                     userData: WeightedPoolEncoder.joinExactTokensInForBPTOut(amountsIn, bptOut),
                     fromInternalBalance: funds.fromInternalBalance,
                 },
-                value: constants.Zero,
+                value: pool.tokensList.indexOf(wrappedNativeAsset) !== -1 &&
+                    nativeAssetValue !== '0'
+                    ? nativeAssetValue
+                    : constants.Zero,
                 outputReference: stakeBptInFarm
                     ? Relayer.toChainedReference(0)
                     : constants.Zero,
