@@ -8699,14 +8699,14 @@ class Relayer {
             calls.push(encodedJoinPool);
         }
         if (stakeBptInFarm) {
-            this.masterChefStakingService.encodeDeposit({
+            calls.push(this.masterChefStakingService.encodeDeposit({
                 sender: funds.sender,
                 recipient: funds.recipient,
                 token: pool.address,
                 pid: farmId,
                 amount: Relayer.toChainedReference(0),
                 outputReference: Zero,
-            });
+            }));
         }
         return {
             function: 'multicall',
