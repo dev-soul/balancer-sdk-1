@@ -3,11 +3,11 @@ import {
     EncodeMasterChefWithdrawInput,
 } from '@/modules/relayer/types';
 import { Interface } from '@ethersproject/abi';
-import fBeetsBarStakingAbi from '@/lib/abi/FBeetsBarStaking.json';
+import masterChefStakingAbi from '@/lib/abi/MasterChefStaking.json';
 
 export class MasterChefStakingService {
     public encodeDeposit(params: EncodeMasterChefDepositInput): string {
-        const fBeetsBarStakingLibrary = new Interface(fBeetsBarStakingAbi);
+        const fBeetsBarStakingLibrary = new Interface(masterChefStakingAbi);
 
         return fBeetsBarStakingLibrary.encodeFunctionData('masterChefDeposit', [
             params.sender,
@@ -20,7 +20,7 @@ export class MasterChefStakingService {
     }
 
     public encodeWithdraw(params: EncodeMasterChefWithdrawInput): string {
-        const fBeetsBarStakingLibrary = new Interface(fBeetsBarStakingAbi);
+        const fBeetsBarStakingLibrary = new Interface(masterChefStakingAbi);
 
         return fBeetsBarStakingLibrary.encodeFunctionData(
             'masterChefWithdraw',

@@ -311,16 +311,15 @@ export class Relayer {
         const nestedLinearPools = this.getNestedLinearPools(pool);
         const calls: string[] = [];
         let queryResult: null | QueryWithSorOutput = null;
+        const nativeToken = tokens.find(
+            (token) => token.address === AddressZero
+        );
+        const nativeAssetValue = nativeToken
+            ? parseFixed(nativeToken.amount, 18).toString()
+            : '0';
 
         //TODO: if there are no nested pools, we don't need to use the batch relayer
         if (nestedLinearPools.length > 0) {
-            const nativeToken = tokens.find(
-                (token) => token.address === AddressZero
-            );
-            const nativeAssetValue = nativeToken
-                ? parseFixed(nativeToken.amount, 18).toString()
-                : '0';
-
             //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
             const tokensIn = nestedLinearPools.map((item) =>
                 nativeToken && item.mainToken === wrappedNativeAsset
@@ -429,7 +428,11 @@ export class Relayer {
                     ),
                     fromInternalBalance: funds.fromInternalBalance,
                 },
-                value: Zero, //TODO: add support for native joins here, ie: FTM/BOOSTED
+                value:
+                    pool.tokensList.indexOf(wrappedNativeAsset) !== -1 &&
+                    nativeAssetValue !== '0'
+                        ? nativeAssetValue
+                        : Zero,
                 outputReference: stakeBptInFarm
                     ? Relayer.toChainedReference(0)
                     : Zero,
