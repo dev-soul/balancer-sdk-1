@@ -8669,8 +8669,14 @@ class Relayer {
         }
         //if this is a weighted pool, we need to also join the pool
         if (isWeightedPool) {
+            const joinHasNativeAsset = pool.tokensList.find((token) => token === wrappedNativeAsset) &&
+                nativeAssetValue !== '0';
             const amountsIn = pool.tokensList.map((tokenAddress) => {
                 const token = tokens.find((token) => {
+                    if (token.address === AddressZero &&
+                        tokenAddress.toLowerCase() === wrappedNativeAsset) {
+                        return true;
+                    }
                     return (token.address.toLowerCase() ===
                         tokenAddress.toLowerCase());
                 });
@@ -8694,17 +8700,16 @@ class Relayer {
                     ? this.batchRelayerAddress
                     : funds.recipient,
                 joinPoolRequest: {
-                    assets: pool.tokensList,
+                    assets: joinHasNativeAsset
+                        ? pool.tokensList.map((token) => token === wrappedNativeAsset ? AddressZero : token)
+                        : pool.tokensList,
                     maxAmountsIn: amountsIn,
                     userData: WeightedPoolEncoder.joinExactTokensInForBPTOut(amountsIn, bptOut),
                     fromInternalBalance: hasNestedLinearPools
                         ? true
                         : funds.fromInternalBalance,
                 },
-                value: pool.tokensList.indexOf(wrappedNativeAsset) !== -1 &&
-                    nativeAssetValue !== '0'
-                    ? nativeAssetValue
-                    : Zero,
+                value: joinHasNativeAsset ? nativeAssetValue : Zero,
                 outputReference: stakeBptInFarm
                     ? Relayer.toChainedReference(0)
                     : Zero,
