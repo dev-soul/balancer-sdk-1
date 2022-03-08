@@ -306,6 +306,7 @@ export class Relayer {
         slippage,
         funds,
         farmId,
+        mintFBeets,
     }: BatchRelayerJoinPool): Promise<TransactionData> {
         const stakeBptInFarm = typeof farmId === 'number';
         const wrappedNativeAsset =
@@ -375,10 +376,13 @@ export class Relayer {
                 assets: queryResult.assets,
                 funds: {
                     ...funds,
-                    toInternalBalance:
+                    /*toInternalBalance:
                         stakeBptInFarm || isWeightedPool
                             ? true
-                            : funds.toInternalBalance,
+                            : funds.toInternalBalance,*/
+                    toInternalBalance: isWeightedPool
+                        ? true
+                        : funds.toInternalBalance,
                 },
                 limits: limits.map((l) => l.toString()),
                 deadline: MaxUint256,
@@ -440,9 +444,10 @@ export class Relayer {
                 poolId: pool.id,
                 poolKind: 0,
                 sender: funds.sender,
-                recipient: stakeBptInFarm
-                    ? this.batchRelayerAddress
-                    : funds.recipient,
+                recipient:
+                    stakeBptInFarm || mintFBeets
+                        ? this.batchRelayerAddress
+                        : funds.recipient,
                 joinPoolRequest: {
                     assets: joinHasNativeAsset
                         ? pool.tokensList.map((token) =>
@@ -465,6 +470,17 @@ export class Relayer {
             });
 
             calls.push(encodedJoinPool);
+        }
+
+        if (mintFBeets) {
+            this.fBeetsBarStakingService.encodeEnter({
+                sender: this.batchRelayerAddress,
+                recipient: stakeBptInFarm
+                    ? this.batchRelayerAddress
+                    : funds.recipient,
+                amount: Relayer.toChainedReference(0),
+                outputReference: Relayer.toChainedReference(0),
+            });
         }
 
         if (stakeBptInFarm) {

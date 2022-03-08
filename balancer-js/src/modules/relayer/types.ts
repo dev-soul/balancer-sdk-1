@@ -93,6 +93,7 @@ export interface BatchRelayerJoinPool {
     funds: FundManagement;
     fetchPools: FetchPoolsInput;
     farmId?: number;
+    mintFBeets?: boolean;
 }
 
 export interface EncodeBooMirrorWorldEnterInput {
