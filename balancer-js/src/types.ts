@@ -49,6 +49,11 @@ export interface BalancerNetworkConfig {
         staBal3Pool?: PoolReference;
         wethStaBal3?: PoolReference;
     };
+    fBeets?: {
+        address: string;
+        farmId: number;
+        poolId: string;
+    };
 }
 
 export type PoolReference = {

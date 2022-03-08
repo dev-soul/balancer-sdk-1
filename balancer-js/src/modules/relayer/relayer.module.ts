@@ -473,14 +473,16 @@ export class Relayer {
         }
 
         if (mintFBeets) {
-            this.fBeetsBarStakingService.encodeEnter({
-                sender: this.batchRelayerAddress,
-                recipient: stakeBptInFarm
-                    ? this.batchRelayerAddress
-                    : funds.recipient,
-                amount: Relayer.toChainedReference(0),
-                outputReference: Relayer.toChainedReference(0),
-            });
+            calls.push(
+                this.fBeetsBarStakingService.encodeEnter({
+                    sender: this.batchRelayerAddress,
+                    recipient: stakeBptInFarm
+                        ? this.batchRelayerAddress
+                        : funds.recipient,
+                    amount: Relayer.toChainedReference(0),
+                    outputReference: Relayer.toChainedReference(0),
+                })
+            );
         }
 
         if (stakeBptInFarm) {
@@ -488,8 +490,14 @@ export class Relayer {
                 this.masterChefStakingService.encodeDeposit({
                     sender: this.batchRelayerAddress,
                     recipient: funds.recipient,
-                    token: pool.address,
-                    pid: farmId,
+                    token:
+                        mintFBeets && this.config.fBeets
+                            ? this.config.fBeets.address
+                            : pool.address,
+                    pid:
+                        mintFBeets && this.config.fBeets
+                            ? this.config.fBeets.farmId
+                            : farmId,
                     amount: Relayer.toChainedReference(0),
                     outputReference: Zero,
                 })
