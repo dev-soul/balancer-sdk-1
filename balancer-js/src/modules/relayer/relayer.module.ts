@@ -46,6 +46,7 @@ export class Relayer {
     private fBeetsBarStakingService: FBeetsBarStakingService;
     private masterChefStakingService: MasterChefStakingService;
     private yearnWrappingService: YearnWrappingService;
+    private batchRelayerAddress: string;
 
     constructor(
         private readonly swaps: Swaps,
@@ -57,6 +58,8 @@ export class Relayer {
         this.fBeetsBarStakingService = new FBeetsBarStakingService();
         this.masterChefStakingService = new MasterChefStakingService();
         this.yearnWrappingService = new YearnWrappingService();
+        this.batchRelayerAddress =
+            this.config.addresses.contracts.batchRelayer || '';
     }
 
     static toChainedReference(key: BigNumberish): BigNumber {
@@ -418,7 +421,9 @@ export class Relayer {
                 poolId: pool.id,
                 poolKind: 0,
                 sender: funds.sender,
-                recipient: funds.recipient,
+                recipient: stakeBptInFarm
+                    ? this.batchRelayerAddress
+                    : funds.recipient,
                 joinPoolRequest: {
                     assets: pool.tokensList,
                     maxAmountsIn: amountsIn,
@@ -444,7 +449,7 @@ export class Relayer {
         if (stakeBptInFarm) {
             calls.push(
                 this.masterChefStakingService.encodeDeposit({
-                    sender: funds.sender,
+                    sender: this.batchRelayerAddress,
                     recipient: funds.recipient,
                     token: pool.address,
                     pid: farmId,

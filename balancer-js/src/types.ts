@@ -33,6 +33,7 @@ export interface BalancerNetworkConfig {
         contracts: {
             vault: string;
             multicall: string;
+            batchRelayer?: string;
         };
         tokens: {
             wrappedNativeAsset: string;
