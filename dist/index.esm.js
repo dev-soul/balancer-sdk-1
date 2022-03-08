@@ -8616,6 +8616,8 @@ class Relayer {
         const wrappedNativeAsset = this.config.addresses.tokens.wrappedNativeAsset.toLowerCase();
         const pool = this.getRequiredPool(poolId);
         const nestedLinearPools = this.getNestedLinearPools(pool);
+        const isWeightedPool = pool.poolType === 'Weighted';
+        const hasNestedLinearPools = nestedLinearPools.length > 0;
         const calls = [];
         let queryResult = null;
         const nativeToken = tokens.find((token) => token.address === AddressZero);
@@ -8623,7 +8625,7 @@ class Relayer {
             ? parseFixed(nativeToken.amount, 18).toString()
             : '0';
         //TODO: if there are no nested pools, we don't need to use the batch relayer
-        if (nestedLinearPools.length > 0) {
+        if (hasNestedLinearPools) {
             //if there are nested linear pools, the first step is to swap mainTokens for linear or phantom stable BPT
             const tokensIn = nestedLinearPools.map((item) => nativeToken && item.mainToken === wrappedNativeAsset
                 ? AddressZero
@@ -8649,7 +8651,12 @@ class Relayer {
                 swapType: SwapType.SwapExactIn,
                 swaps: queryResult.swaps,
                 assets: queryResult.assets,
-                funds,
+                funds: {
+                    ...funds,
+                    toInternalBalance: stakeBptInFarm || isWeightedPool
+                        ? true
+                        : funds.toInternalBalance,
+                },
                 limits: limits.map((l) => l.toString()),
                 deadline: MaxUint256,
                 value: nativeAssetValue,
@@ -8661,7 +8668,7 @@ class Relayer {
             calls.push(encodedBatchSwap);
         }
         //if this is a weighted pool, we need to also join the pool
-        if (pool.poolType === 'Weighted') {
+        if (isWeightedPool) {
             const amountsIn = pool.tokensList.map((tokenAddress) => {
                 const token = tokens.find((token) => {
                     return (token.address.toLowerCase() ===
@@ -8690,7 +8697,9 @@ class Relayer {
                     assets: pool.tokensList,
                     maxAmountsIn: amountsIn,
                     userData: WeightedPoolEncoder.joinExactTokensInForBPTOut(amountsIn, bptOut),
-                    fromInternalBalance: funds.fromInternalBalance,
+                    fromInternalBalance: hasNestedLinearPools
+                        ? true
+                        : funds.fromInternalBalance,
                 },
                 value: pool.tokensList.indexOf(wrappedNativeAsset) !== -1 &&
                     nativeAssetValue !== '0'
