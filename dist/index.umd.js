@@ -8606,7 +8606,7 @@
                 },
             };
         }
-        async joinPool({ poolId, tokens, bptOut, fetchPools, slippage, funds, farmId, }) {
+        async joinPool({ poolId, tokens, bptOut, fetchPools, slippage, funds, farmId, mintFBeets, }) {
             const stakeBptInFarm = typeof farmId === 'number';
             const wrappedNativeAsset = this.config.addresses.tokens.wrappedNativeAsset.toLowerCase();
             const pool = this.getRequiredPool(poolId);
@@ -8648,7 +8648,11 @@
                     assets: queryResult.assets,
                     funds: {
                         ...funds,
-                        toInternalBalance: stakeBptInFarm || isWeightedPool
+                        /*toInternalBalance:
+                            stakeBptInFarm || isWeightedPool
+                                ? true
+                                : funds.toInternalBalance,*/
+                        toInternalBalance: isWeightedPool
                             ? true
                             : funds.toInternalBalance,
                     },
@@ -8691,7 +8695,7 @@
                     poolId: pool.id,
                     poolKind: 0,
                     sender: funds.sender,
-                    recipient: stakeBptInFarm
+                    recipient: stakeBptInFarm || mintFBeets
                         ? this.batchRelayerAddress
                         : funds.recipient,
                     joinPoolRequest: {
@@ -8710,6 +8714,16 @@
                         : constants.Zero,
                 });
                 calls.push(encodedJoinPool);
+            }
+            if (mintFBeets) {
+                this.fBeetsBarStakingService.encodeEnter({
+                    sender: this.batchRelayerAddress,
+                    recipient: stakeBptInFarm
+                        ? this.batchRelayerAddress
+                        : funds.recipient,
+                    amount: Relayer.toChainedReference(0),
+                    outputReference: Relayer.toChainedReference(0),
+                });
             }
             if (stakeBptInFarm) {
                 calls.push(this.masterChefStakingService.encodeDeposit({

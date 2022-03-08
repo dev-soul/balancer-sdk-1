@@ -571,6 +571,7 @@ interface BatchRelayerJoinPool {
     funds: FundManagement;
     fetchPools: FetchPoolsInput;
     farmId?: number;
+    mintFBeets?: boolean;
 }
 interface EncodeBooMirrorWorldEnterInput {
     sender: string;
@@ -653,7 +654,7 @@ declare class Relayer {
      * @returns Transaction data with calldata. Outputs.amountsOut has amounts of batchSwapTokensOut returned.
      */
     exitPoolAndBatchSwap(params: ExitAndBatchSwapInput): Promise<TransactionData>;
-    joinPool({ poolId, tokens, bptOut, fetchPools, slippage, funds, farmId, }: BatchRelayerJoinPool): Promise<TransactionData>;
+    joinPool({ poolId, tokens, bptOut, fetchPools, slippage, funds, farmId, mintFBeets, }: BatchRelayerJoinPool): Promise<TransactionData>;
     private getNestedLinearPools;
     private getRequiredPool;
     private getRequiredLinearPoolForWrappedToken;
