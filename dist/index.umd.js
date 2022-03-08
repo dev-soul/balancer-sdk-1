@@ -8439,6 +8439,8 @@
             this.fBeetsBarStakingService = new FBeetsBarStakingService();
             this.masterChefStakingService = new MasterChefStakingService();
             this.yearnWrappingService = new YearnWrappingService();
+            this.batchRelayerAddress =
+                this.config.addresses.contracts.batchRelayer || '';
         }
         static toChainedReference(key) {
             // The full padded prefix is 66 characters long, with 64 hex characters and the 0x prefix.
@@ -8676,7 +8678,9 @@
                     poolId: pool.id,
                     poolKind: 0,
                     sender: funds.sender,
-                    recipient: funds.recipient,
+                    recipient: stakeBptInFarm
+                        ? this.batchRelayerAddress
+                        : funds.recipient,
                     joinPoolRequest: {
                         assets: pool.tokensList,
                         maxAmountsIn: amountsIn,
@@ -8695,7 +8699,7 @@
             }
             if (stakeBptInFarm) {
                 calls.push(this.masterChefStakingService.encodeDeposit({
-                    sender: funds.sender,
+                    sender: this.batchRelayerAddress,
                     recipient: funds.recipient,
                     token: pool.address,
                     pid: farmId,

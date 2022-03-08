@@ -176,6 +176,7 @@ interface BalancerNetworkConfig {
         contracts: {
             vault: string;
             multicall: string;
+            batchRelayer?: string;
         };
         tokens: {
             wrappedNativeAsset: string;
@@ -620,6 +621,7 @@ declare class Relayer {
     private fBeetsBarStakingService;
     private masterChefStakingService;
     private yearnWrappingService;
+    private batchRelayerAddress;
     constructor(swaps: Swaps, config: BalancerNetworkConfig);
     static toChainedReference(key: BigNumberish): BigNumber;
     /**
