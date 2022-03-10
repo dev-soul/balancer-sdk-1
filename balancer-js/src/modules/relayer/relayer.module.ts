@@ -433,7 +433,7 @@ export class Relayer {
                     ) || -1;
 
                 //if the return amount is 0, we dont pass on the chained reference
-                if (index === -1 || queryResult?.returnAmounts[index] === '0') {
+                if (index === -1 || queryResult?.deltas[index] === '0') {
                     return '0';
                 }
 
