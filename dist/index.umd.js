@@ -8686,7 +8686,7 @@
                     //Replace the amount with the chained reference value
                     const index = (queryResult === null || queryResult === void 0 ? void 0 : queryResult.assets.findIndex((asset) => asset.toLowerCase() === tokenAddress.toLowerCase())) || -1;
                     //if the return amount is 0, we dont pass on the chained reference
-                    if (index === -1 || (queryResult === null || queryResult === void 0 ? void 0 : queryResult.returnAmounts[index]) === '0') {
+                    if (index === -1 || (queryResult === null || queryResult === void 0 ? void 0 : queryResult.deltas[index]) === '0') {
                         return '0';
                     }
                     return Relayer.toChainedReference(index || 0);
