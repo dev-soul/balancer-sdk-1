@@ -8787,7 +8787,8 @@
         getRequiredLinearPoolForWrappedToken(wrappedToken) {
             const pools = this.getPools();
             const pool = pools.find((pool) => typeof pool.wrappedIndex === 'number' &&
-                pool.tokensList[pool.wrappedIndex] === wrappedToken);
+                pool.tokensList[pool.wrappedIndex] ===
+                    wrappedToken.toLowerCase());
             if (!pool) {
                 throw new Error('No linear pool found for wrapped token: ' + wrappedToken);
             }
