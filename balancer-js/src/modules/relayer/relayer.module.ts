@@ -570,7 +570,8 @@ export class Relayer {
         const pool = pools.find(
             (pool) =>
                 typeof pool.wrappedIndex === 'number' &&
-                pool.tokensList[pool.wrappedIndex] === wrappedToken
+                pool.tokensList[pool.wrappedIndex] ===
+                    wrappedToken.toLowerCase()
         );
 
         if (!pool) {
