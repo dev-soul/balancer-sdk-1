@@ -471,7 +471,7 @@
 
 "@balancer-labs/sor@github:beethovenxfi/balancer-sor#daniel/generic-path-algo-build":
   version "3.0.0-beta.0"
-  resolved "https://codeload.github.com/beethovenxfi/balancer-sor/tar.gz/9a6ace7ec6d37e4192672251e3d7248cfa6aeb7c"
+  resolved "https://codeload.github.com/beethovenxfi/balancer-sor/tar.gz/7ec545de8ce5bbe743185c795d505c5fe7314515"
   dependencies:
     isomorphic-fetch "^2.2.1"
 
