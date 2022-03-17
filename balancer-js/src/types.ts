@@ -54,6 +54,7 @@ export interface BalancerNetworkConfig {
         farmId: number;
         poolId: string;
     };
+    boostedPools?: string[];
 }
 
 export type PoolReference = {

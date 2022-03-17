@@ -58,6 +58,7 @@ export class Sor extends SOR {
             weth: network.addresses.tokens.wrappedNativeAsset,
             staBal3Pool: network.pools?.staBal3Pool,
             wethStaBal3: network.pools?.wethStaBal3,
+            boostedPools: network.boostedPools,
         };
     }
 
