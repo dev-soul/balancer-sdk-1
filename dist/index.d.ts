@@ -197,6 +197,7 @@ interface BalancerNetworkConfig {
         farmId: number;
         poolId: string;
     };
+    boostedPools?: string[];
 }
 declare type PoolReference = {
     id: string;

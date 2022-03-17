@@ -7262,6 +7262,7 @@ class Sor extends sor.SOR {
             weth: network.addresses.tokens.wrappedNativeAsset,
             staBal3Pool: (_a = network.pools) === null || _a === void 0 ? void 0 : _a.staBal3Pool,
             wethStaBal3: (_b = network.pools) === null || _b === void 0 ? void 0 : _b.wethStaBal3,
+            boostedPools: network.boostedPools,
         };
     }
     static getPoolDataService(network, sorConfig, provider, subgraphClient) {
