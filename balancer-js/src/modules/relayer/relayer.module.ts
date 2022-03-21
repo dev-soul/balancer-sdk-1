@@ -253,17 +253,24 @@ export class Relayer {
             queryResult.returnAmounts = queryResult.returnAmounts.map(
                 (returnAmount, i) => {
                     const asset = params.batchSwapTokensOut[i].toLowerCase();
+
                     if (this.linearPoolWrappedTokenMap[asset]) {
                         const linearPool =
                             this.linearPoolWrappedTokenMap[asset];
-                        const priceRate =
-                            linearPool.tokens[linearPool.wrappedIndex || 0]
-                                .priceRate;
+                        const wrappedToken =
+                            linearPool.tokens[linearPool.wrappedIndex || 0];
+                        const wrappedDecimals = wrappedToken.decimals;
+                        const priceRate = parseFixed(
+                            wrappedToken.priceRate,
+                            wrappedDecimals
+                        );
 
-                        return `${
-                            parseFloat(returnAmount) * parseFloat(priceRate)
-                        }`;
+                        return BigNumber.from(returnAmount)
+                            .mul(priceRate)
+                            .div(BigNumber.from(10).pow(wrappedDecimals))
+                            .toString();
                     }
+
                     return returnAmount;
                 }
             );
