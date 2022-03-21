@@ -8579,9 +8579,13 @@ class Relayer {
                 const asset = params.batchSwapTokensOut[i].toLowerCase();
                 if (this.linearPoolWrappedTokenMap[asset]) {
                     const linearPool = this.linearPoolWrappedTokenMap[asset];
-                    const priceRate = linearPool.tokens[linearPool.wrappedIndex || 0]
-                        .priceRate;
-                    return `${parseFloat(returnAmount) * parseFloat(priceRate)}`;
+                    const wrappedToken = linearPool.tokens[linearPool.wrappedIndex || 0];
+                    const wrappedDecimals = wrappedToken.decimals;
+                    const priceRate = parseFixed(wrappedToken.priceRate, wrappedDecimals);
+                    return BigNumber.from(returnAmount)
+                        .mul(priceRate)
+                        .div(BigNumber.from(10).pow(wrappedDecimals))
+                        .toString();
                 }
                 return returnAmount;
             });
