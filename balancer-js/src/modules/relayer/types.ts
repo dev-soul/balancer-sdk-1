@@ -64,13 +64,17 @@ export interface ExitAndBatchSwapInput {
     exiter: string;
     swapRecipient: string;
     poolId: string;
-    exitTokens: string[];
+    exits: ExitAndBatchSwapExitItemInput[];
     userData: string;
-    expectedAmountsOut: string[];
-    batchSwapTokensOut: string[];
     slippage: string;
     fetchPools: FetchPoolsInput;
     unwrap?: boolean;
+}
+
+export interface ExitAndBatchSwapExitItemInput {
+    exitToken: string;
+    exitExpectedAmountOut: string;
+    batchSwapTokenOut?: string;
 }
 
 export type ExitPoolData = ExitPoolRequest & EncodeExitPoolInput;
