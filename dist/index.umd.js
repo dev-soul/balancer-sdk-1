@@ -8492,23 +8492,34 @@
          * @returns Transaction data with calldata. Outputs.amountsOut has amounts of batchSwapTokensOut returned.
          */
         async exitPoolAndBatchSwap(params) {
-            const exitTokens = params.exitTokens.map((exitToken) => exitToken.toLowerCase());
             const slippageAmountNegative = constants.WeiPerEther.sub(bignumber.BigNumber.from(params.slippage));
-            // Set min amounts out of exit pool based on slippage
-            const minAmountsOut = params.expectedAmountsOut.map((amt) => bignumber.BigNumber.from(amt)
-                .mul(slippageAmountNegative)
-                .div(constants.WeiPerEther)
-                .toString());
+            const exits = params.exits.map((exit) => {
+                var _a;
+                return ({
+                    ...exit,
+                    exitToken: exit.exitToken.toLowerCase(),
+                    batchSwapTokenOut: (_a = exit.batchSwapTokenOut) === null || _a === void 0 ? void 0 : _a.toLowerCase(),
+                    // Set min amounts out of exit pool based on slippage
+                    exitMinAmountOut: bignumber.BigNumber.from(exit.exitExpectedAmountOut)
+                        .mul(slippageAmountNegative)
+                        .div(constants.WeiPerEther)
+                        .toString(),
+                });
+            });
             // Output of exit is used as input to swaps
-            const outputReferences = params.exitTokens.map((asset, index) => ({
+            const outputReferences = exits.map((exit, index) => ({
                 index,
                 key: Relayer.toChainedReference(index),
             }));
+            const exitsWithBatchSwaps = exits.filter((exit) => exit.batchSwapTokenOut);
+            const batchSwapTokensIn = exitsWithBatchSwaps.map((exit) => exit.exitToken);
+            const batchSwapTokensOut = exitsWithBatchSwaps.map((exit) => exit.batchSwapTokenOut || '');
+            const poolContainsOnlyPhantomBpts = exits.length === exitsWithBatchSwaps.length;
             const exitCall = this.vaultActionsService.constructExitCall({
-                assets: params.exitTokens,
-                minAmountsOut,
+                assets: exits.map((exit) => exit.exitToken),
+                minAmountsOut: exits.map((exit) => exit.exitMinAmountOut),
                 userData: params.userData,
-                toInternalBalance: true,
+                toInternalBalance: poolContainsOnlyPhantomBpts,
                 poolId: params.poolId,
                 poolKind: 0,
                 sender: params.exiter,
@@ -8520,29 +8531,30 @@
             // This will give batchSwap swap paths
             // Amounts out will be worst case amounts
             const queryResult = await this.swaps.queryBatchSwapWithSor({
-                tokensIn: params.exitTokens,
-                tokensOut: params.batchSwapTokensOut,
+                tokensIn: batchSwapTokensIn,
+                tokensOut: batchSwapTokensOut,
                 swapType: exports.SwapType.SwapExactIn,
-                amounts: minAmountsOut,
+                amounts: exitsWithBatchSwaps.map((exit) => exit.exitMinAmountOut),
                 fetchPools: params.fetchPools,
             });
             // Update swap amounts with ref outputs from exitPool
             queryResult.swaps.forEach((swap) => {
                 const token = queryResult.assets[swap.assetInIndex];
-                const index = exitTokens.indexOf(token);
-                if (index !== -1)
+                const index = exits.findIndex((exit) => exit.exitToken === token);
+                if (index !== -1) {
                     swap.amount = outputReferences[index].key.toString();
+                }
             });
             // const tempDeltas = ['10096980', '0', '0', '10199896999999482390', '0']; // Useful for debug
             // Replace tokenIn delta for swaps with amount + slippage.
             // This gives tolerance for limit incase amount out of exitPool is larger min,
             const slippageAmountPositive = constants.WeiPerEther.add(params.slippage);
-            params.exitTokens.forEach((exitToken, i) => {
+            exits.forEach((exit) => {
                 const index = queryResult.assets
                     .map((elem) => elem.toLowerCase())
-                    .indexOf(exitToken.toLowerCase());
+                    .indexOf(exit.exitToken.toLowerCase());
                 if (index !== -1) {
-                    queryResult.deltas[index] = bignumber.BigNumber.from(params.expectedAmountsOut[i])
+                    queryResult.deltas[index] = bignumber.BigNumber.from(exit.exitExpectedAmountOut)
                         .mul(slippageAmountPositive)
                         .div(constants.WeiPerEther)
                         .toString();
@@ -8550,15 +8562,15 @@
             });
             // Creates limit array.
             // Slippage set to 0. Already accounted for as swap used amounts out of pool with worst case slippage.
-            const limits = Swaps.getLimitsForSlippage(params.exitTokens, // tokensIn
-            params.batchSwapTokensOut, // tokensOut
+            const limits = Swaps.getLimitsForSlippage(batchSwapTokensIn, // tokensIn
+            batchSwapTokensOut, // tokensOut
             exports.SwapType.SwapExactIn, queryResult.deltas, // tempDeltas // Useful for debug
             queryResult.assets, '0');
             // Creates fund management using internal balance as source of tokens
             const funds = {
                 sender: params.exiter,
                 recipient: params.swapRecipient,
-                fromInternalBalance: true,
+                fromInternalBalance: poolContainsOnlyPhantomBpts,
                 toInternalBalance: false,
             };
             let additionalCalls = [];
@@ -8571,7 +8583,7 @@
                 unwrapOutputReferences = outputReferences;
                 //update the return amounts to represent the unwrappedAmount
                 queryResult.returnAmounts = queryResult.returnAmounts.map((returnAmount, i) => {
-                    const asset = params.batchSwapTokensOut[i].toLowerCase();
+                    const asset = batchSwapTokensOut[i].toLowerCase();
                     if (this.linearPoolWrappedTokenMap[asset]) {
                         const linearPool = this.linearPoolWrappedTokenMap[asset];
                         const wrappedToken = linearPool.tokens[linearPool.wrappedIndex || 0];
@@ -8601,12 +8613,19 @@
                 function: 'multicall',
                 params: calls,
                 outputs: {
-                    //Add the slippage back to the amountsOut so that it reflects the expected amount
-                    //rather than worst case
-                    amountsOut: queryResult.returnAmounts.map((amt) => bignumber.BigNumber.from(amt)
-                        .mul(slippageAmountPositive)
-                        .div(constants.WeiPerEther)
-                        .toString()),
+                    amountsOut: exits.map((exit) => {
+                        //this exit does not have a batch swap, return the expected amount out
+                        if (!exit.batchSwapTokenOut) {
+                            return exit.exitExpectedAmountOut;
+                        }
+                        const index = exitsWithBatchSwaps.findIndex((exitWithBatchSwap) => exitWithBatchSwap.exitToken === exit.exitToken);
+                        //Add the slippage back to the amountsOut so that it reflects the expected amount
+                        //rather than worst case
+                        return bignumber.BigNumber.from(queryResult.returnAmounts[index])
+                            .mul(slippageAmountPositive)
+                            .div(constants.WeiPerEther)
+                            .toString();
+                    }),
                 },
             };
         }

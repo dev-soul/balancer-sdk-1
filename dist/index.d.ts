@@ -550,13 +550,16 @@ interface ExitAndBatchSwapInput {
     exiter: string;
     swapRecipient: string;
     poolId: string;
-    exitTokens: string[];
+    exits: ExitAndBatchSwapExitItemInput[];
     userData: string;
-    expectedAmountsOut: string[];
-    batchSwapTokensOut: string[];
     slippage: string;
     fetchPools: FetchPoolsInput;
     unwrap?: boolean;
+}
+interface ExitAndBatchSwapExitItemInput {
+    exitToken: string;
+    exitExpectedAmountOut: string;
+    batchSwapTokenOut?: string;
 }
 declare type ExitPoolData = ExitPoolRequest & EncodeExitPoolInput;
 interface NestedLinearPool {
@@ -1892,4 +1895,4 @@ declare class BalancerSDK {
     get networkConfig(): BalancerNetworkConfig;
 }
 
-export { AaveHelpers, Account, AssetHelpers, BalancerErrors, BalancerLinearPoolType, BalancerNetworkConfig, BalancerSDK, BalancerSdkConfig, BalancerSdkSorConfig, BatchRelayerJoinPool, BatchSwap, BatchSwapStep, EncodeBatchSwapInput, EncodeBooMirrorWorldEnterInput, EncodeBooMirrorWorldLeaveInput, EncodeExitPoolInput, EncodeFBeetsBarEnterInput, EncodeFBeetsBarLeaveInput, EncodeJoinPoolInput, EncodeMasterChefDepositInput, EncodeMasterChefWithdrawInput, EncodeUnwrapAaveStaticTokenInput, EncodeUnwrapYearnVaultTokenInput, ExitAndBatchSwapInput, ExitPoolData, ExitPoolRequest, FetchPoolsInput, FundManagement, JoinPoolRequest, ManagedPoolEncoder, NestedLinearPool, Network, OutputReference, PoolBalanceOp, PoolBalanceOpKind, PoolReference, PoolSpecialization, QueryWithSorInput, QueryWithSorOutput, Relayer, RelayerAction, RelayerAuthorization, SingleSwap, Sor, StablePhantomPoolJoinKind, StablePoolEncoder, StablePoolExitKind, StablePoolJoinKind, Subgraph, Swap, SwapType, Swaps, TransactionData, UserBalanceOp, UserBalanceOpKind, WeightedPoolEncoder, WeightedPoolExitKind, WeightedPoolJoinKind, accountToAddress, getLimitsForSlippage, getPoolAddress, getPoolNonce, getPoolSpecialization, isNormalizedWeights, isSameAddress, signPermit, splitPoolId, toNormalizedWeights };
+export { AaveHelpers, Account, AssetHelpers, BalancerErrors, BalancerLinearPoolType, BalancerNetworkConfig, BalancerSDK, BalancerSdkConfig, BalancerSdkSorConfig, BatchRelayerJoinPool, BatchSwap, BatchSwapStep, EncodeBatchSwapInput, EncodeBooMirrorWorldEnterInput, EncodeBooMirrorWorldLeaveInput, EncodeExitPoolInput, EncodeFBeetsBarEnterInput, EncodeFBeetsBarLeaveInput, EncodeJoinPoolInput, EncodeMasterChefDepositInput, EncodeMasterChefWithdrawInput, EncodeUnwrapAaveStaticTokenInput, EncodeUnwrapYearnVaultTokenInput, ExitAndBatchSwapExitItemInput, ExitAndBatchSwapInput, ExitPoolData, ExitPoolRequest, FetchPoolsInput, FundManagement, JoinPoolRequest, ManagedPoolEncoder, NestedLinearPool, Network, OutputReference, PoolBalanceOp, PoolBalanceOpKind, PoolReference, PoolSpecialization, QueryWithSorInput, QueryWithSorOutput, Relayer, RelayerAction, RelayerAuthorization, SingleSwap, Sor, StablePhantomPoolJoinKind, StablePoolEncoder, StablePoolExitKind, StablePoolJoinKind, Subgraph, Swap, SwapType, Swaps, TransactionData, UserBalanceOp, UserBalanceOpKind, WeightedPoolEncoder, WeightedPoolExitKind, WeightedPoolJoinKind, accountToAddress, getLimitsForSlippage, getPoolAddress, getPoolNonce, getPoolSpecialization, isNormalizedWeights, isSameAddress, signPermit, splitPoolId, toNormalizedWeights };
