@@ -60,6 +60,17 @@ export interface EncodeUnwrapYearnVaultTokenInput {
     outputReference: BigNumberish;
 }
 
+export interface ExitStablePhantomInput {
+    account: string;
+    poolId: string;
+    exits: {
+        bptAmountIn: string;
+        tokenOut: string;
+        unwrap?: boolean;
+    }[];
+    slippage: string;
+}
+
 export interface ExitAndBatchSwapInput {
     exiter: string;
     swapRecipient: string;

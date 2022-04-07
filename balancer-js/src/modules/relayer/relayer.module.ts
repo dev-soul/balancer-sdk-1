@@ -10,6 +10,7 @@ import { Swaps } from '@/modules/swaps/swaps.module';
 import {
     BatchRelayerJoinPool,
     ExitAndBatchSwapInput,
+    ExitStablePhantomInput,
     NestedLinearPool,
     OutputReference,
 } from './types';
@@ -138,6 +139,8 @@ export class Relayer {
     async exitPoolAndBatchSwap(
         params: ExitAndBatchSwapInput
     ): Promise<TransactionData> {
+        const pool = this.getRequiredPool(params.poolId);
+        const isWeightedPool = pool.poolType === 'Weighted';
         const slippageAmountNegative = WeiPerEther.sub(
             BigNumber.from(params.slippage)
         );
@@ -704,6 +707,121 @@ export class Relayer {
             params: calls,
             outputs: {
                 amountsOut: amountsUnwrapped,
+            },
+        };
+    }
+
+    async swapAndUnwrapStablePhantomPool({
+        poolId,
+        slippage,
+        exits,
+        account,
+    }: ExitStablePhantomInput): Promise<TransactionData> {
+        const pool = this.getRequiredPool(poolId);
+        const linearPools = this.getNestedLinearPools(pool);
+        const tokensIn = exits.map(() => pool.address.toLowerCase());
+        const batchSwapTokensOut = exits.map((exit) => {
+            if (!exit.unwrap) {
+                return exit.tokenOut;
+            }
+
+            const linearPool = linearPools.find(
+                (linearPool) =>
+                    linearPool.mainToken.toLowerCase() ===
+                    exit.tokenOut.toLowerCase()
+            );
+
+            return linearPool?.wrappedToken ?? exit.tokenOut;
+        });
+
+        // Use swapsService to get swap info for tokensIn>wrappedTokens
+        const queryResult = await this.swaps.queryBatchSwapWithSor({
+            tokensIn,
+            tokensOut: batchSwapTokensOut,
+            amounts: exits.map((exit) => exit.bptAmountIn),
+            swapType: SwapType.SwapExactIn,
+            fetchPools: {
+                fetchPools: true,
+                fetchOnChain: true,
+            },
+        });
+
+        // Gets limits array for tokensIn>wrappedTokens based on input slippage
+        const limits = Swaps.getLimitsForSlippage(
+            tokensIn, // tokensIn
+            batchSwapTokensOut, // tokensOut
+            SwapType.SwapExactIn,
+            queryResult.deltas,
+            queryResult.assets,
+            slippage
+        );
+
+        const wrappedTokens = batchSwapTokensOut.filter((batchSwapTokenOut) => {
+            const linearPool = linearPools.find(
+                (linearPool) =>
+                    linearPool.wrappedToken.toLowerCase() === batchSwapTokenOut
+            );
+
+            return !!linearPool;
+        });
+
+        const funds = {
+            sender: account,
+            //if all tokens are wrapped, send the output to the batch relayer
+            recipient:
+                wrappedTokens.length === batchSwapTokensOut.length
+                    ? this.batchRelayerAddress
+                    : account,
+            fromInternalBalance: false,
+            toInternalBalance: false,
+        };
+
+        const { unwrapCalls, outputReferences } = this.encodeUnwrapCalls(
+            wrappedTokens,
+            queryResult.assets,
+            funds
+        );
+
+        const encodedBatchSwap = this.vaultActionsService.encodeBatchSwap({
+            swapType: SwapType.SwapExactIn,
+            swaps: queryResult.swaps,
+            assets: queryResult.assets,
+            funds,
+            limits: limits.map((l) => l.toString()),
+            deadline: MaxUint256,
+            value: '0',
+            outputReferences: outputReferences,
+        });
+
+        const calls = [encodedBatchSwap, ...unwrapCalls];
+
+        return {
+            function: 'multicall',
+            params: calls,
+            outputs: {
+                amountsOut: queryResult.returnAmounts.map((amount, index) => {
+                    const asset = batchSwapTokensOut[index];
+                    const linearPool = linearPools.find(
+                        (linearPool) =>
+                            linearPool.wrappedToken.toLowerCase() ===
+                            asset.toLowerCase()
+                    );
+
+                    if (linearPool) {
+                        const wrappedRate =
+                            linearPool.pool.tokens[
+                                linearPool.pool.wrappedIndex || 0
+                            ].priceRate;
+                        const wrappedRateScaled = parseFixed(wrappedRate, 18);
+
+                        return BigNumber.from(amount)
+                            .mul(wrappedRateScaled)
+                            .div(WeiPerEther)
+                            .toString();
+                    }
+
+                    return amount.toString();
+                }),
             },
         };
     }
